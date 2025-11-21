@@ -45,13 +45,13 @@ export const ProjectsModal = ({ open, onOpenChange }: ProjectsModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[700px] max-w-[95vw] mx-4 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Projects</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           {/* Create New Project */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-col sm:flex-row">
             {isCreating ? (
               <>
                 <Input
@@ -95,21 +95,21 @@ export const ProjectsModal = ({ open, onOpenChange }: ProjectsModalProps) => {
           </div>
 
           {/* Projects List */}
-          <ScrollArea className="h-[400px]">
+          <ScrollArea className="flex-1 min-h-0">
             {projects.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-3 pr-2">
                 {projects.map((project) => {
                   const projectConversations = getProjectConversations(project);
                   return (
                     <div
                       key={project.id}
-                      className="border border-border rounded-lg p-4 space-y-3"
+                      className="border border-border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Folder className="w-5 h-5 text-primary" />
-                          <h3 className="font-semibold">{project.name}</h3>
-                          <span className="text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                          <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
+                          <h3 className="font-semibold text-sm sm:text-base truncate">{project.name}</h3>
+                          <span className="text-xs text-muted-foreground shrink-0">
                             ({projectConversations.length} conversation{projectConversations.length !== 1 ? 's' : ''})
                           </span>
                         </div>

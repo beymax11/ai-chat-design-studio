@@ -80,7 +80,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="group py-6 px-4"
+      className="group py-3 sm:py-6 px-3 sm:px-4"
     >
       <div className={`
         max-w-3xl mx-auto flex
@@ -117,10 +117,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             </div>
           ) : (
             <div className={`
-              ${isUser ? 'bg-primary/10 dark:bg-primary/20 rounded-lg px-4 py-3 inline-block' : ''}
+              ${isUser ? 'bg-primary/10 dark:bg-primary/20 rounded-lg px-3 py-2 sm:px-4 sm:py-3 inline-block' : ''}
             `}>
               <div className={`
-                prose prose-sm dark:prose-invert max-w-none
+                prose prose-sm dark:prose-invert max-w-none text-sm sm:text-base
                 ${isUser ? 'text-right' : 'text-left'}
               `}>
               <ReactMarkdown
@@ -176,20 +176,21 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           {/* Action Buttons */}
           {!isEditing && (
             <div className={`
-              mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity
+              mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity
               ${isUser ? 'justify-end' : 'justify-start'}
             `}>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => handleCopy(displayContent)}
+                className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
               >
                 {copied ? (
-                  <Check className="w-4 h-4 mr-1" />
+                  <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 ) : (
-                  <Copy className="w-4 h-4 mr-1" />
+                  <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 )}
-                {copied ? 'Copied' : 'Copy'}
+                <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
               </Button>
               
               <Button
@@ -198,13 +199,16 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                 onClick={handleTranslate}
                 disabled={isTranslating || targetLanguage === 'auto-detect'}
                 title={targetLanguage === 'auto-detect' ? 'Select a target language in settings' : undefined}
+                className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
               >
-                <Languages className="w-4 h-4 mr-1" />
-                {isTranslating 
-                  ? 'Translating...' 
-                  : translatedContent 
-                    ? (showOriginal ? 'Show Translation' : 'Show Original') 
-                    : 'Translate'}
+                <Languages className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <span className="hidden sm:inline">
+                  {isTranslating 
+                    ? 'Translating...' 
+                    : translatedContent 
+                      ? (showOriginal ? 'Show Translation' : 'Show Original') 
+                      : 'Translate'}
+                </span>
               </Button>
               
               {!isUser && (
@@ -212,9 +216,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   size="sm"
                   variant="ghost"
                   onClick={() => regenerateResponse(message.id)}
+                  className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                 >
-                  <RotateCw className="w-4 h-4 mr-1" />
-                  Regenerate
+                  <RotateCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  <span className="hidden sm:inline">Regenerate</span>
                 </Button>
               )}
               
@@ -223,9 +228,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   size="sm"
                   variant="ghost"
                   onClick={handleEdit}
+                  className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                 >
-                  <Edit2 className="w-4 h-4 mr-1" />
-                  Edit
+                  <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
               )}
             </div>

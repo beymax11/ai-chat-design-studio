@@ -4,16 +4,22 @@ import { MessageBubble } from './MessageBubble';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bot } from 'lucide-react';
+import { Bot, Menu } from 'lucide-react';
 import { ModelSelector } from './ModelSelector';
 import { InputBar } from './InputBar';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from './LoginModal';
 import { SignUpModal } from './SignUpModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export const ChatWindow = () => {
+interface ChatWindowProps {
+  onMenuClick?: () => void;
+}
+
+export const ChatWindow = ({ onMenuClick }: ChatWindowProps = {}) => {
   const { currentConversation, isTyping, selectedModel, setSelectedModel } = useChat();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const setInputRef = useRef<((value: string) => void) | null>(null);
@@ -46,38 +52,52 @@ export const ChatWindow = () => {
     return (
       <div className="flex-1 flex flex-col bg-background">
         {/* Header with Model Selector */}
-        <div className="p-4 flex items-center justify-between">
-          <ModelSelector
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-          />
+        <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {isMobile && user && onMenuClick && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onMenuClick}
+                className="h-9 w-9 shrink-0"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            )}
+            <div className="min-w-0 flex-1">
+              <ModelSelector
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+              />
+            </div>
+          </div>
           {!user && (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setIsLoginOpen(true)}>
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <Button variant="ghost" size="sm" onClick={() => setIsLoginOpen(true)} className="text-xs sm:text-sm">
                 Login
               </Button>
-              <Button size="sm" onClick={() => setIsSignUpOpen(true)}>
+              <Button size="sm" onClick={() => setIsSignUpOpen(true)} className="text-xs sm:text-sm">
                 Sign Up
               </Button>
             </div>
           )}
         </div>
         
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md px-4">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md w-full">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, type: 'spring' }}
-              className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-6"
+              className="w-12 h-12 sm:w-16 sm:h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6"
             >
-              <Bot className="w-8 h-8 text-accent-foreground" />
+              <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-accent-foreground" />
             </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-3xl font-bold mb-3"
+              className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3"
             >
               Welcome to AI Chat
             </motion.h1>
@@ -85,7 +105,7 @@ export const ChatWindow = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-muted-foreground text-lg"
+              className="text-muted-foreground text-base sm:text-lg"
             >
               Start a new conversation to begin chatting with AI
             </motion.p>
@@ -101,37 +121,51 @@ export const ChatWindow = () => {
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
       {/* Header with Model Selector */}
-      <div className="p-4 flex-shrink-0 flex items-center justify-between">
-        <ModelSelector
-          selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
-        />
+      <div className="p-3 sm:p-4 flex-shrink-0 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {isMobile && user && onMenuClick && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMenuClick}
+              className="h-9 w-9 shrink-0"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+          )}
+          <div className="min-w-0 flex-1">
+            <ModelSelector
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+            />
+          </div>
+        </div>
         {!user && (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setIsLoginOpen(true)}>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => setIsLoginOpen(true)} className="text-xs sm:text-sm">
               Login
             </Button>
-            <Button size="sm" onClick={() => setIsSignUpOpen(true)}>
+            <Button size="sm" onClick={() => setIsSignUpOpen(true)} className="text-xs sm:text-sm">
               Sign Up
             </Button>
-          </div>
+        </div>
         )}
       </div>
       
       {currentConversation.messages.length === 0 ? (
         <div className="flex-1 flex flex-col">
-          <div className="flex items-start justify-center pt-32">
-            <div className="w-full max-w-3xl px-4">
-              <div className="text-center mb-8 max-w-md mx-auto">
-                <h2 className="text-xl font-semibold mb-2">How can I help you today?</h2>
-                <p className="text-muted-foreground">
+          <div className="flex items-start justify-center pt-8 sm:pt-16 md:pt-32">
+            <div className="w-full max-w-3xl px-3 sm:px-4">
+              <div className="text-center mb-6 sm:mb-8 max-w-md mx-auto">
+                <h2 className="text-lg sm:text-xl font-semibold mb-2">How can I help you today?</h2>
+                <p className="text-muted-foreground text-sm sm:text-base">
                   Ask me anything and I'll do my best to provide helpful, detailed responses.
                 </p>
               </div>
               <InputBar onSetInputRef={(setInput) => { setInputRef.current = setInput; }} />
               
               {/* Recommendations */}
-              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+              <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2 justify-center">
                 {[
                   'Create an image',
                   'Recommend a product',
@@ -146,7 +180,7 @@ export const ChatWindow = () => {
                     key={recommendation}
                     variant="outline"
                     size="sm"
-                    className="rounded-full text-xs"
+                    className="rounded-full text-xs px-2 sm:px-3"
                     onClick={() => {
                       if (setInputRef.current) {
                         setInputRef.current(recommendation);
@@ -166,7 +200,7 @@ export const ChatWindow = () => {
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
           >
-            <div className="py-4 pt-16">
+            <div className="py-2 sm:py-4 pt-12 sm:pt-16">
               {currentConversation.messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}

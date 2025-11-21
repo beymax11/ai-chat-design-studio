@@ -75,7 +75,7 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px] max-w-[90vw] mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Sign Up</DialogTitle>
           <DialogDescription>
@@ -94,6 +94,7 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
             <div className="grid gap-2">
@@ -106,6 +107,7 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
             <div className="grid gap-2">
@@ -118,6 +120,7 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
             <div className="grid gap-2">
@@ -130,19 +133,21 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </DialogFooter>

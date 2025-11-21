@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Trash2, ChevronRight, Search, Folder, User, Crown, Palette, Settings, HelpCircle, LogOut } from 'lucide-react';
+import { Plus, MessageSquare, MoreHorizontal, Trash2, ChevronRight, Search, Folder, User, Crown, Palette, Settings, HelpCircle, LogOut, Menu } from 'lucide-react';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { SettingsModal } from './SettingsModal';
@@ -22,9 +26,12 @@ import { useState } from 'react';
 interface SidebarProps {
   isCollapsed?: boolean;
   onToggle?: () => void;
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
+export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpen = false, onOpenChange }: SidebarProps) => {
   const { 
     conversations, 
     currentConversation, 
@@ -51,21 +58,31 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
     });
   };
 
+  const handleSwitchConversation = (id: string) => {
+    switchConversation(id);
+    if (isMobile && onOpenChange) {
+      onOpenChange(false);
+    }
+  };
+
+  const handleCreateNewChat = () => {
+    createNewChat();
+    if (isMobile && onOpenChange) {
+      onOpenChange(false);
+    }
+  };
+
   const userName = user?.user_metadata?.full_name || 'User';
   const userEmail = user?.email || 'user@example.com';
 
-  return (
-    <motion.aside
-      initial={{ x: -300 }}
-      animate={{ x: 0 }}
-      className={`${isCollapsed ? 'w-16' : 'w-64'} bg-chat-sidebar-bg border-r border-border flex flex-col h-screen relative transition-all duration-300`}
-    >
+  const sidebarContent = (
+    <>
       {/* Header */}
-      <div className={`p-3 border-b border-border ${isCollapsed ? 'px-2' : ''}`}>
-        {!isCollapsed && (
+      <div className={`p-3 border-b border-border ${isCollapsed && !isMobile ? 'px-2' : ''}`}>
+        {(!isCollapsed || isMobile) && (
           <div className="mb-3 flex items-center justify-between">
             <h1 className="text-xl font-bold text-foreground">BugBounty AI</h1>
-            {onToggle && (
+            {!isMobile && onToggle && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -77,7 +94,7 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
             )}
           </div>
         )}
-        {isCollapsed && onToggle && (
+        {isCollapsed && !isMobile && onToggle && (
           <div className="mb-3 flex justify-center">
             <Button
               variant="ghost"
@@ -90,36 +107,36 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
           </div>
         )}
         <Button
-          onClick={createNewChat}
-          className={`w-full ${isCollapsed ? 'justify-center px-0' : 'justify-start gap-2'}`}
+          onClick={handleCreateNewChat}
+          className={`w-full ${isCollapsed && !isMobile ? 'justify-center px-0' : 'justify-start gap-2'}`}
           variant="ghost"
-          title={isCollapsed ? 'New Chat' : undefined}
+          title={isCollapsed && !isMobile ? 'New Chat' : undefined}
         >
           <Plus className="w-4 h-4" />
-          {!isCollapsed && <span>New Chat</span>}
+          {(!isCollapsed || isMobile) && <span>New Chat</span>}
         </Button>
         <Button
           onClick={() => setIsSearchOpen(true)}
-          className={`w-full mt-2 ${isCollapsed ? 'justify-center px-0' : 'justify-start gap-2'}`}
+          className={`w-full mt-2 ${isCollapsed && !isMobile ? 'justify-center px-0' : 'justify-start gap-2'}`}
           variant="ghost"
-          title={isCollapsed ? 'Search chat' : undefined}
+          title={isCollapsed && !isMobile ? 'Search chat' : undefined}
         >
           <Search className="w-4 h-4" />
-          {!isCollapsed && <span>Search chat</span>}
+          {(!isCollapsed || isMobile) && <span>Search chat</span>}
         </Button>
         <Button
           onClick={() => setIsProjectsOpen(true)}
-          className={`w-full mt-2 ${isCollapsed ? 'justify-center px-0' : 'justify-start gap-2'}`}
+          className={`w-full mt-2 ${isCollapsed && !isMobile ? 'justify-center px-0' : 'justify-start gap-2'}`}
           variant="ghost"
-          title={isCollapsed ? 'Projects' : undefined}
+          title={isCollapsed && !isMobile ? 'Projects' : undefined}
         >
           <Folder className="w-4 h-4" />
-          {!isCollapsed && <span>Projects</span>}
+          {(!isCollapsed || isMobile) && <span>Projects</span>}
         </Button>
       </div>
 
       {/* Conversation List */}
-      {!isCollapsed && (
+      {(!isCollapsed || isMobile) && (
         <ScrollArea className="flex-1 px-2 py-2">
           <div className="px-3 py-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -133,7 +150,7 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
                 className="group relative"
               >
                 <button
-                  onClick={() => switchConversation(conversation.id)}
+                  onClick={() => handleSwitchConversation(conversation.id)}
                   className={`
                     w-full text-left px-3 py-2.5 rounded-lg text-sm
                     transition-colors duration-200
@@ -180,15 +197,15 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
       )}
 
       {/* Footer - Always visible at bottom */}
-      <div className={`p-3 border-t border-border mt-auto ${isCollapsed ? 'px-2' : ''}`}>
+      <div className={`p-3 border-t border-border mt-auto ${isCollapsed && !isMobile ? 'px-2' : ''}`}>
         {/* Profile Section */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className={`group w-full flex items-center gap-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:bg-accent data-[state=open]:text-accent-foreground ${isCollapsed ? 'justify-center' : ''}`}>
+            <button className={`group w-full flex items-center gap-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:bg-accent data-[state=open]:text-accent-foreground ${isCollapsed && !isMobile ? 'justify-center' : ''}`}>
               <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-accent-foreground/20 flex items-center justify-center flex-shrink-0 transition-colors">
                 <User className="w-4 h-4 text-foreground group-hover:text-accent-foreground transition-colors" />
               </div>
-              {!isCollapsed && (
+              {(!isCollapsed || isMobile) && (
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium text-foreground group-hover:text-accent-foreground truncate transition-colors">{userName}</p>
                   <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80 truncate transition-colors">{userEmail}</p>
@@ -247,6 +264,28 @@ export const Sidebar = ({ isCollapsed = false, onToggle }: SidebarProps) => {
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
         <ProjectsModal open={isProjectsOpen} onOpenChange={setIsProjectsOpen} />
       </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0">
+          <div className="bg-chat-sidebar-bg flex flex-col h-full">
+            {sidebarContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <motion.aside
+      initial={{ x: -300 }}
+      animate={{ x: 0 }}
+      className={`${isCollapsed ? 'w-16' : 'w-64'} bg-chat-sidebar-bg border-r border-border flex flex-col h-screen relative transition-all duration-300 hidden md:flex`}
+    >
+      {sidebarContent}
     </motion.aside>
   );
 };

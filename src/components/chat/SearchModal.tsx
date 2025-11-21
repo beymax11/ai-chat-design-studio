@@ -46,18 +46,18 @@ export const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] mx-4 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Search Conversations</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search by title or message content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-10 pr-10 text-sm sm:text-base"
               autoFocus
             />
             {searchQuery && (
@@ -73,7 +73,7 @@ export const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
           </div>
 
           {searchQuery ? (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="flex-1 min-h-0">
               {filteredConversations.length > 0 ? (
                 <div className="space-y-2">
                   {filteredConversations.map((conversation) => (

@@ -52,7 +52,7 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px] max-w-[90vw] mx-4">
         <DialogHeader>
           <DialogTitle>Login</DialogTitle>
           <DialogDescription>
@@ -71,6 +71,7 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
             <div className="grid gap-2">
@@ -83,19 +84,21 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                className="text-sm sm:text-base"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? 'Logging in...' : 'Login'}
             </Button>
           </DialogFooter>

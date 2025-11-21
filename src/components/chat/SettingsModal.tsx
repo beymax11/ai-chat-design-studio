@@ -69,53 +69,55 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] p-0 flex [&>button]:hidden">
+      <DialogContent className="max-w-4xl h-[80vh] max-h-[90vh] p-0 flex flex-col sm:flex-row [&>button]:hidden max-w-[95vw]">
         {/* Sidebar Navigation */}
-        <div className="w-64 border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Settings</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {settingsSections.map((section) => {
-              const Icon = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
-                    transition-colors mb-1
-                    ${
-                      activeSection === section.id
-                        ? 'bg-accent text-foreground'
-                        : 'text-muted-foreground hover:bg-accent/50'
-                    }
-                  `}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{section.label}</span>
-                </button>
-              );
-            })}
+        <div className="w-full sm:w-64 border-b sm:border-b-0 sm:border-r border-border flex flex-row sm:flex-col overflow-x-auto sm:overflow-x-visible">
+          <div className="p-3 sm:p-4 border-b sm:border-b-0 sm:border-r border-border flex items-center justify-between sm:flex-col sm:justify-start min-w-0 sm:min-w-[256px]">
+            <div className="flex items-center justify-between w-full sm:w-auto mb-0 sm:mb-4">
+              <h2 className="text-base sm:text-lg font-semibold">Settings</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8 sm:hidden"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto p-2 flex flex-row sm:flex-col gap-1 sm:gap-0">
+              {settingsSections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={`
+                      flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm
+                      transition-colors mb-0 sm:mb-1 whitespace-nowrap shrink-0
+                      ${
+                        activeSection === section.id
+                          ? 'bg-accent text-foreground'
+                          : 'text-muted-foreground hover:bg-accent/50'
+                      }
+                    `}
+                  >
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>{section.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {activeSection === 'general' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">General</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">General</h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Appearance */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Appearance</label>
@@ -227,51 +229,51 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             )}
 
             {activeSection === 'notifications' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Notifications</h3>
-                <p className="text-muted-foreground">Notification settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Notifications</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Notification settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'personalization' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Personalization</h3>
-                <p className="text-muted-foreground">Personalization settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Personalization</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Personalization settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'apps' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Apps & Connectors</h3>
-                <p className="text-muted-foreground">Apps & Connectors settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Apps & Connectors</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Apps & Connectors settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'data' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Data controls</h3>
-                <p className="text-muted-foreground">Data controls settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Data controls</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Data controls settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'security' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Security</h3>
-                <p className="text-muted-foreground">Security settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Security</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Security settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'parental' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Parental controls</h3>
-                <p className="text-muted-foreground">Parental controls settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Parental controls</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Parental controls settings coming soon...</p>
               </div>
             )}
 
             {activeSection === 'account' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold mb-6">Account</h3>
-                <p className="text-muted-foreground">Account settings coming soon...</p>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Account</h3>
+                <p className="text-muted-foreground text-sm sm:text-base">Account settings coming soon...</p>
               </div>
             )}
           </div>

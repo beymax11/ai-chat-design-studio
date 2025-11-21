@@ -5,11 +5,14 @@ import { Sidebar } from '@/components/chat/Sidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { InputBar } from '@/components/chat/InputBar';
 import { ThemeProvider } from 'next-themes';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const ChatApp = () => {
   const { createNewChat, conversations, currentConversation } = useChat();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
 
   useEffect(() => {
@@ -29,10 +32,16 @@ const ChatApp = () => {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {user && (
-        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+        <Sidebar 
+          isCollapsed={isSidebarCollapsed} 
+          onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          isMobile={isMobile}
+          isOpen={isSidebarOpen}
+          onOpenChange={setIsSidebarOpen}
+        />
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <ChatWindow />
+        <ChatWindow onMenuClick={() => setIsSidebarOpen(true)} />
       </div>
     </div>
   );

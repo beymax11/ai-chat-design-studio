@@ -52,18 +52,18 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
 
   return (
     <div className="border-t border-border bg-background">
-      <div className="max-w-3xl mx-auto p-4">
-        <div className="relative flex items-end gap-2 bg-chat-input-bg border border-border rounded-3xl shadow-sm">
+      <div className="max-w-3xl mx-auto p-3 sm:p-4">
+        <div className="relative flex items-end gap-1 sm:gap-2 bg-chat-input-bg border border-border rounded-2xl sm:rounded-3xl shadow-sm">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="ml-2 my-2 rounded-lg hover:bg-accent"
+                className="ml-1 sm:ml-2 my-1.5 sm:my-2 rounded-lg hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
                 disabled={!currentConversation || isTyping}
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-2" align="start">
@@ -108,9 +108,9 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
             placeholder={currentConversation ? "Ask anything" : "Create a new chat to start"}
             disabled={!currentConversation || isTyping}
             className="
-              flex-1 min-h-[52px] max-h-[200px] resize-none
+              flex-1 min-h-[44px] sm:min-h-[52px] max-h-[200px] resize-none
               border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0
-              py-3 pl-1 pr-4
+              py-2 sm:py-3 pl-1 pr-2 sm:pr-4 text-sm sm:text-base
             "
             rows={1}
           />
@@ -118,12 +118,12 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
             onClick={handleSubmit}
             disabled={!input.trim() || !currentConversation || isTyping}
             size="icon"
-            className="m-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50"
+            className="m-1.5 sm:m-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 h-8 w-8 sm:h-10 sm:w-10"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-2">
+        <p className="text-xs text-muted-foreground text-center mt-1.5 sm:mt-2 px-2">
           AI can make mistakes. Consider checking important information.
         </p>
       </div>

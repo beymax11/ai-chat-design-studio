@@ -56,8 +56,8 @@ export const ModelSelector = ({ selectedModel, setSelectedModel }: ModelSelector
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'group flex items-center gap-1.5 px-3 py-1.5 rounded-full',
-            'text-sm font-medium transition-all duration-200',
+            'group flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full',
+            'text-xs sm:text-sm font-medium transition-all duration-200',
             'border border-border bg-background',
             'hover:bg-accent hover:text-accent-foreground',
             'data-[state=open]:bg-accent data-[state=open]:text-white',
@@ -69,10 +69,11 @@ export const ModelSelector = ({ selectedModel, setSelectedModel }: ModelSelector
           {selectedModelData.icon && (
             <span className="text-muted-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors">{selectedModelData.icon}</span>
           )}
-          <span className="text-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors">{selectedModelData.name}</span>
+          <span className="text-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors hidden sm:inline">{selectedModelData.name}</span>
+          <span className="text-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors sm:hidden">{selectedModelData.name.split(' ')[0]}</span>
           <ChevronDown
             className={cn(
-              'w-3.5 h-3.5 text-muted-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-all duration-200',
+              'w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-all duration-200',
               open && 'transform rotate-180'
             )}
           />
@@ -81,7 +82,7 @@ export const ModelSelector = ({ selectedModel, setSelectedModel }: ModelSelector
       <DropdownMenuContent
         align="start"
         sideOffset={8}
-        className="w-64 p-1.5"
+        className="w-56 sm:w-64 p-1.5"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {availableModels.map((model) => {
