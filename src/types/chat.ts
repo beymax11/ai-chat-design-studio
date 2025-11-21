@@ -4,6 +4,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   isEditing?: boolean;
+  model?: string;
 }
 
 export interface Conversation {
@@ -12,4 +13,5 @@ export interface Conversation {
   messages: Message[];
   createdAt: Date;
   updatedAt: Date;
+  model?: string;
 }

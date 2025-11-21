@@ -1,25 +1,38 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ChatProvider, useChat } from '@/contexts/ChatContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/chat/Sidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { InputBar } from '@/components/chat/InputBar';
 import { ThemeProvider } from 'next-themes';
 
 const ChatApp = () => {
-  const { createNewChat, conversations } = useChat();
+  const { createNewChat, conversations, currentConversation } = useChat();
+  const { user } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
 
   useEffect(() => {
-    if (conversations.length === 0) {
+    // Only create a new chat if we've checked storage and there are no conversations
+    if (hasCheckedStorage && conversations.length === 0 && !currentConversation) {
       createNewChat();
     }
-  }, []);
+    // Mark that we've checked storage after a brief delay to allow localStorage to load
+    if (!hasCheckedStorage) {
+      const timer = setTimeout(() => {
+        setHasCheckedStorage(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [conversations, currentConversation, hasCheckedStorage, createNewChat]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <Sidebar />
+      {user && (
+        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+      )}
       <div className="flex-1 flex flex-col overflow-hidden">
         <ChatWindow />
-        <InputBar />
       </div>
     </div>
   );

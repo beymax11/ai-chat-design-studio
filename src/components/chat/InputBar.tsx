@@ -1,20 +1,39 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus, File, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from '@/contexts/ChatContext';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
-export const InputBar = () => {
-  const { sendMessage, currentConversation, isTyping } = useChat();
+interface InputBarProps {
+  onSetInputRef?: (setInput: (value: string) => void) => void;
+}
+
+export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
+  const { sendMessage, currentConversation, isTyping, selectedModel, setSelectedModel } = useChat();
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Expose setInput function to parent via ref callback
+  useEffect(() => {
+    if (onSetInputRef) {
+      onSetInputRef((value: string) => {
+        setInput(value);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+      });
+    }
+  }, [onSetInputRef]);
 
   const handleSubmit = async () => {
     if (!input.trim() || !currentConversation || isTyping) return;
 
     const message = input.trim();
     setInput('');
-    await sendMessage(message);
+    await sendMessage(message, selectedModel);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -34,18 +53,64 @@ export const InputBar = () => {
   return (
     <div className="border-t border-border bg-background">
       <div className="max-w-3xl mx-auto p-4">
-        <div className="relative flex items-end gap-2 bg-chat-input-bg border border-border rounded-xl shadow-sm">
+        <div className="relative flex items-end gap-2 bg-chat-input-bg border border-border rounded-3xl shadow-sm">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="ml-2 my-2 rounded-lg hover:bg-accent"
+                disabled={!currentConversation || isTyping}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="start">
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    // Handle file upload
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.click();
+                  }}
+                >
+                  <File className="w-4 h-4" />
+                  Files
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    // Handle photo upload
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.multiple = true;
+                    input.click();
+                  }}
+                >
+                  <Image className="w-4 h-4" />
+                  Photo
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={currentConversation ? "Message AI..." : "Create a new chat to start"}
+            placeholder={currentConversation ? "Ask anything" : "Create a new chat to start"}
             disabled={!currentConversation || isTyping}
             className="
               flex-1 min-h-[52px] max-h-[200px] resize-none
               border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0
-              py-3 px-4
+              py-3 pl-1 pr-4
             "
             rows={1}
           />
