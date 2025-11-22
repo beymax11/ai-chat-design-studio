@@ -1,5 +1,5 @@
-import { Message } from '@/types/chat';
-import { Copy, RotateCw, Edit2, Check, Languages } from 'lucide-react';
+import { Message, FileAttachment } from '@/types/chat';
+import { Copy, RotateCw, Edit2, Check, Languages, File, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -72,6 +72,35 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const downloadFile = (attachment: FileAttachment) => {
+    try {
+      const base64Data = attachment.data;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: attachment.type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };
+
   const isUser = message.role === 'user';
   const displayContent = showOriginal ? message.content : (translatedContent || message.content);
 
@@ -91,6 +120,56 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           flex-1 min-w-0
           ${isUser ? 'flex items-end flex-col' : 'flex items-start flex-col'}
         `}>
+          {/* Display attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className={`
+              mb-2 flex flex-wrap gap-2 w-full
+              ${isUser ? 'justify-end' : 'justify-start'}
+            `}>
+              {message.attachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="relative group/attachment border border-border rounded-lg p-2 bg-muted/50 max-w-[300px]"
+                >
+                  {attachment.type.startsWith('image/') && attachment.url ? (
+                    <div className="relative">
+                      <img
+                        src={attachment.url}
+                        alt={attachment.name}
+                        className="max-w-full max-h-64 object-contain rounded"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 bg-background/80 hover:bg-background"
+                        onClick={() => downloadFile(attachment)}
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <File className="w-8 h-8 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{attachment.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => downloadFile(attachment)}
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           {isEditing ? (
             <div className={`
               space-y-2 w-full

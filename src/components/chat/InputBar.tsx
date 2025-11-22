@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Plus, File, Image } from 'lucide-react';
+import { Send, Plus, File, Image, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from '@/contexts/ChatContext';
+import { FileAttachment } from '@/types/chat';
+import { v4 as uuidv4 } from 'uuid';
 import {
   Popover,
   PopoverContent,
@@ -16,6 +18,7 @@ interface InputBarProps {
 export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
   const { sendMessage, currentConversation, isTyping, selectedModel, setSelectedModel } = useChat();
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Expose setInput function to parent via ref callback
@@ -28,12 +31,87 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
     }
   }, [onSetInputRef]);
 
-  const handleSubmit = async () => {
-    if (!input.trim() || !currentConversation || isTyping) return;
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:image/png;base64,")
+        const base64 = result.split(',')[1] || result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
-    const message = input.trim();
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const newAttachments: FileAttachment[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const base64Data = await convertFileToBase64(file);
+        const attachment: FileAttachment = {
+          id: uuidv4(),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: base64Data,
+          url: file.type.startsWith('image/') ? `data:${file.type};base64,${base64Data}` : undefined,
+        };
+        newAttachments.push(attachment);
+      } catch (error) {
+        console.error('Error converting file to base64:', error);
+      }
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  const handleFileUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      handleFileSelect(target.files);
+    };
+    input.click();
+  };
+
+  const handleImageUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      handleFileSelect(target.files);
+    };
+    input.click();
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== id));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleSubmit = async () => {
+    if ((!input.trim() && attachments.length === 0) || !currentConversation || isTyping) return;
+
+    const message = input.trim() || 'Sent files';
+    const messageAttachments = [...attachments];
     setInput('');
-    await sendMessage(message, selectedModel);
+    setAttachments([]);
+    await sendMessage(message, selectedModel, messageAttachments);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -50,9 +128,51 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
     }
   }, [input]);
 
+  useEffect(() => {
+    if (onSetInputRef) {
+      onSetInputRef((value: string) => {
+        setInput(value);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+      });
+    }
+  }, [onSetInputRef]);
+
   return (
     <div className="border-t border-border bg-background">
       <div className="max-w-3xl mx-auto p-3 sm:p-4">
+        {/* Display selected attachments */}
+        {attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="relative group border border-border rounded-lg p-2 bg-muted/50 flex items-center gap-2 max-w-[200px]"
+              >
+                {attachment.type.startsWith('image/') && attachment.url ? (
+                  <img
+                    src={attachment.url}
+                    alt={attachment.name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                ) : (
+                  <File className="w-8 h-8 text-muted-foreground" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{attachment.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => removeAttachment(attachment.id)}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="relative flex items-end gap-1 sm:gap-2 bg-chat-input-bg border border-border rounded-2xl sm:rounded-3xl shadow-sm">
           <Popover>
             <PopoverTrigger asChild>
@@ -71,13 +191,7 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2"
-                  onClick={() => {
-                    // Handle file upload
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.click();
-                  }}
+                  onClick={handleFileUpload}
                 >
                   <File className="w-4 h-4" />
                   Files
@@ -85,14 +199,7 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2"
-                  onClick={() => {
-                    // Handle photo upload
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.multiple = true;
-                    input.click();
-                  }}
+                  onClick={handleImageUpload}
                 >
                   <Image className="w-4 h-4" />
                   Photo
@@ -116,7 +223,7 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
           />
           <Button
             onClick={handleSubmit}
-            disabled={!input.trim() || !currentConversation || isTyping}
+            disabled={(!input.trim() && attachments.length === 0) || !currentConversation || isTyping}
             size="icon"
             className="m-1.5 sm:m-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 h-8 w-8 sm:h-10 sm:w-10"
           >

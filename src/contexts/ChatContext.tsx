@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { Conversation, Message } from '@/types/chat';
+import { Conversation, Message, FileAttachment } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { detectLanguageRequest } from '@/lib/languageDetection';
 import { translateText, LanguageCode } from '@/contexts/TranslationContext';
@@ -19,7 +19,7 @@ interface ChatContextType {
   setSelectedModel: (modelId: string) => void;
   createNewChat: () => void;
   switchConversation: (id: string) => void;
-  sendMessage: (content: string, model?: string) => Promise<void>;
+  sendMessage: (content: string, model?: string, attachments?: FileAttachment[]) => Promise<void>;
   regenerateResponse: (messageId: string) => Promise<void>;
   editMessage: (messageId: string, newContent: string) => Promise<void>;
   deleteConversation: (id: string) => void;
@@ -447,7 +447,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [conversations]);
 
-  const sendMessage = useCallback(async (content: string, model?: string) => {
+  const sendMessage = useCallback(async (content: string, model?: string, attachments?: FileAttachment[]) => {
     if (!currentConversation) return;
 
     const modelToUse = model || selectedModel;
@@ -461,6 +461,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       content,
       timestamp: new Date(),
       model: modelToUse,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined,
     };
 
     // Update conversation with user message and model

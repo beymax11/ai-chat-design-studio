@@ -1,3 +1,12 @@
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string; // base64 encoded data
+  url?: string; // optional URL for display
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -5,6 +14,7 @@ export interface Message {
   timestamp: Date;
   isEditing?: boolean;
   model?: string;
+  attachments?: FileAttachment[];
 }
 
 export interface Conversation {
