@@ -1,16 +1,15 @@
 import { Message, FileAttachment } from '@/types/chat';
-import { Copy, RotateCw, Edit2, Check, Languages, File, Download, X } from 'lucide-react';
+import { Copy, RotateCw, Edit2, Check, File, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useChat } from '@/contexts/ChatContext';
 import { useTheme } from 'next-themes';
 import { Textarea } from '@/components/ui/textarea';
-import { useTranslation } from '@/contexts/TranslationContext';
 
 interface MessageBubbleProps {
   message: Message;
@@ -19,19 +18,9 @@ interface MessageBubbleProps {
 export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { regenerateResponse, editMessage } = useChat();
   const { theme } = useTheme();
-  const { translateText, targetLanguage } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
-  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(true);
-
-  // Reset translation when message content changes
-  useEffect(() => {
-    setTranslatedContent(null);
-    setShowOriginal(true);
-  }, [message.content, message.id]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -53,23 +42,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const handleCancelEdit = () => {
     setEditContent(message.content);
     setIsEditing(false);
-  };
-
-  const handleTranslate = async () => {
-    if (showOriginal && translatedContent === null) {
-      setIsTranslating(true);
-      try {
-        const translated = await translateText(message.content, targetLanguage);
-        setTranslatedContent(translated);
-        setShowOriginal(false);
-      } catch (error) {
-        console.error('Translation failed:', error);
-      } finally {
-        setIsTranslating(false);
-      }
-    } else {
-      setShowOriginal(!showOriginal);
-    }
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -102,7 +74,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   };
 
   const isUser = message.role === 'user';
-  const displayContent = showOriginal ? message.content : (translatedContent || message.content);
 
   return (
     <motion.div
@@ -241,13 +212,8 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   },
                 }}
               >
-                {displayContent}
+                {message.content}
               </ReactMarkdown>
-              {translatedContent && (
-                <div className="mt-2 text-xs text-muted-foreground italic">
-                  {showOriginal ? 'Showing original text' : 'Showing translated text'}
-                </div>
-              )}
               </div>
             </div>
           )}
@@ -261,7 +227,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleCopy(displayContent)}
+                onClick={() => handleCopy(message.content)}
                 className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
               >
                 {copied ? (
@@ -270,24 +236,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 )}
                 <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleTranslate}
-                disabled={isTranslating || targetLanguage === 'auto-detect'}
-                title={targetLanguage === 'auto-detect' ? 'Select a target language in settings' : undefined}
-                className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
-              >
-                <Languages className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                <span className="hidden sm:inline">
-                  {isTranslating 
-                    ? 'Translating...' 
-                    : translatedContent 
-                      ? (showOriginal ? 'Show Translation' : 'Show Original') 
-                      : 'Translate'}
-                </span>
               </Button>
               
               {!isUser && (

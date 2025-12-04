@@ -67,13 +67,13 @@ export const ModelSelector = ({ selectedModel, setSelectedModel }: ModelSelector
           )}
         >
           {selectedModelData.icon && (
-            <span className="text-muted-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors">{selectedModelData.icon}</span>
+            <span className="text-muted-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-colors">{selectedModelData.icon}</span>
           )}
-          <span className="text-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors hidden sm:inline">{selectedModelData.name}</span>
-          <span className="text-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-colors sm:hidden">{selectedModelData.name.split(' ')[0]}</span>
+          <span className="text-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-colors hidden sm:inline">{selectedModelData.name}</span>
+          <span className="text-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-colors sm:hidden">{selectedModelData.name.split(' ')[0]}</span>
           <ChevronDown
             className={cn(
-              'w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground group-hover:text-accent-foreground data-[state=open]:text-white transition-all duration-200',
+              'w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-all duration-200',
               open && 'transform rotate-180'
             )}
           />

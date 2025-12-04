@@ -8,6 +8,7 @@ import { AccentColorProvider } from "@/contexts/AccentColorContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import ConfirmEmail from "./pages/ConfirmEmail";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/confirm-email" element={<ConfirmEmail />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -3,6 +3,7 @@ import { Conversation, Message, FileAttachment } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { detectLanguageRequest } from '@/lib/languageDetection';
 import { translateText, LanguageCode } from '@/contexts/TranslationContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Project {
   id: string;
@@ -41,6 +42,8 @@ const DEFAULT_MODEL = 'gpt-smart';
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading: authLoading } = useAuth();
+  
   // Initialize conversations from localStorage
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     if (typeof window !== 'undefined') {
@@ -99,19 +102,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isTyping, setIsTyping] = useState(false);
   
-  // Persist conversations to localStorage whenever they change
+  // Persist conversations to localStorage whenever they change (only if user is logged in)
   useEffect(() => {
-    if (typeof window !== 'undefined' && conversations.length > 0) {
+    if (typeof window !== 'undefined' && conversations.length > 0 && user) {
       localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
     }
-  }, [conversations]);
+  }, [conversations, user]);
 
-  // Persist current conversation ID to localStorage
+  // Persist current conversation ID to localStorage (only if user is logged in)
   useEffect(() => {
-    if (typeof window !== 'undefined' && currentConversation) {
+    if (typeof window !== 'undefined' && currentConversation && user) {
       localStorage.setItem(CURRENT_CONVERSATION_ID_KEY, currentConversation.id);
     }
-  }, [currentConversation]);
+  }, [currentConversation, user]);
   
   // Initialize projects from localStorage
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -139,6 +142,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
     }
   }, [projects]);
+
+  // Clear conversations when user is not logged in (only after auth has finished loading)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // Clear conversations from state
+      setConversations([]);
+      setCurrentConversation(null);
+      
+      // Clear conversations from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
+        localStorage.removeItem(CURRENT_CONVERSATION_ID_KEY);
+      }
+      
+      // Clear all projects' conversation references
+      setProjects(prev => prev.map(project => ({
+        ...project,
+        conversationIds: [],
+        updatedAt: new Date(),
+      })));
+    }
+  }, [user, authLoading]);
   
   // Initialize model from localStorage or use default
   const [selectedModel, setSelectedModelState] = useState<string>(() => {

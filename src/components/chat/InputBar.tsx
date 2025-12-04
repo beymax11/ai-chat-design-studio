@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Plus, File, Image, X } from 'lucide-react';
+import { Send, Plus, File, Image, X, Paperclip } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from '@/contexts/ChatContext';
@@ -10,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface InputBarProps {
   onSetInputRef?: (setInput: (value: string) => void) => void;
@@ -141,96 +143,137 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
     <div className="border-t border-border bg-background">
       <div className="max-w-3xl mx-auto p-3 sm:p-4">
         {/* Display selected attachments */}
-        {attachments.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="relative group border border-border rounded-lg p-2 bg-muted/50 flex items-center gap-2 max-w-[200px]"
-              >
-                {attachment.type.startsWith('image/') && attachment.url ? (
-                  <img
-                    src={attachment.url}
-                    alt={attachment.name}
-                    className="w-12 h-12 object-cover rounded"
-                  />
-                ) : (
-                  <File className="w-8 h-8 text-muted-foreground" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{attachment.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => removeAttachment(attachment.id)}
+        <AnimatePresence>
+          {attachments.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 flex flex-wrap gap-2"
+            >
+              {attachments.map((attachment, index) => (
+                <motion.div
+                  key={attachment.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  className={cn(
+                    "relative group border border-border rounded-lg p-2.5",
+                    "bg-muted/50",
+                    "flex items-center gap-2.5 max-w-[220px]",
+                    "hover:bg-muted transition-all duration-300"
+                  )}
                 >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="relative flex items-end gap-1 sm:gap-2 bg-chat-input-bg border border-border rounded-2xl sm:rounded-3xl shadow-sm">
+                  {attachment.type.startsWith('image/') && attachment.url ? (
+                    <img
+                      src={attachment.url}
+                      alt={attachment.name}
+                      className="w-14 h-14 object-cover rounded border border-border"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 bg-muted rounded flex items-center justify-center border border-border">
+                      <File className="w-7 h-7 text-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{attachment.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeAttachment(attachment.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className={cn(
+          "relative flex items-end gap-1 sm:gap-2",
+          "bg-background border border-border rounded-2xl sm:rounded-3xl",
+          "shadow-sm hover:shadow-md transition-all duration-300"
+        )}>
+          {/* Attachment Button */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="ml-1 sm:ml-2 my-1.5 sm:my-2 rounded-lg hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
+                className="ml-1.5 sm:ml-2 my-2 rounded-lg hover:bg-accent h-9 w-9 sm:h-10 sm:w-10"
                 disabled={!currentConversation || isTyping}
               >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Plus className="w-5 h-5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 p-2" align="start">
+            <PopoverContent className="w-48 p-2 rounded-lg" align="start">
               <div className="space-y-1">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 hover:bg-accent"
                   onClick={handleFileUpload}
                 >
                   <File className="w-4 h-4" />
-                  Files
+                  <span>Upload Files</span>
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start gap-2"
+                  className="w-full justify-start gap-2 hover:bg-accent"
                   onClick={handleImageUpload}
                 >
                   <Image className="w-4 h-4" />
-                  Photo
+                  <span>Upload Photo</span>
                 </Button>
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* Textarea */}
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={currentConversation ? "Ask anything" : "Create a new chat to start"}
+            placeholder={currentConversation ? "Ask anything..." : "Create a new chat to start"}
             disabled={!currentConversation || isTyping}
-            className="
-              flex-1 min-h-[44px] sm:min-h-[52px] max-h-[200px] resize-none
-              border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0
-              py-2 sm:py-3 pl-1 pr-2 sm:pr-4 text-sm sm:text-base
-            "
+            className={cn(
+              "flex-1 min-h-[44px] sm:min-h-[52px] max-h-[200px] resize-none",
+              "border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
+              "py-2 sm:py-3 pl-1 pr-2 sm:pr-4 text-sm sm:text-base"
+            )}
             rows={1}
           />
+
+          {/* Send Button */}
           <Button
             onClick={handleSubmit}
             disabled={(!input.trim() && attachments.length === 0) || !currentConversation || isTyping}
             size="icon"
-            className="m-1.5 sm:m-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 h-8 w-8 sm:h-10 sm:w-10"
+            className={cn(
+              "m-1.5 sm:m-2 rounded-lg",
+              "bg-foreground hover:bg-foreground/90",
+              "text-background",
+              "disabled:opacity-50",
+              "h-9 w-9 sm:h-10 sm:w-10",
+              "transition-all duration-200"
+            )}
           >
-            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-1.5 sm:mt-2 px-2">
+
+        {/* Footer Note */}
+        <p className="text-xs text-muted-foreground text-center mt-2 px-2">
           AI can make mistakes. Consider checking important information.
         </p>
       </div>
