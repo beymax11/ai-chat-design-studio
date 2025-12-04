@@ -29,6 +29,17 @@ CREATE POLICY "Users can view own confirmation tokens"
   FOR SELECT
   USING (auth.uid() = user_id);
 
+-- Policy: Allow reading tokens by token value for email confirmation
+-- This allows unauthenticated users to verify their email using the token
+-- Security: Only allows reading tokens that are not expired and not used
+CREATE POLICY "Allow token lookup for email confirmation"
+  ON public.email_confirmation_tokens
+  FOR SELECT
+  USING (
+    expires_at > NOW() 
+    AND used = FALSE
+  );
+
 -- Policy: Allow service role to insert tokens (for signup)
 -- Note: This might need to be adjusted based on your security requirements
 -- You may want to use a service role key for this operation
@@ -42,6 +53,19 @@ CREATE POLICY "Users can update own confirmation tokens"
   ON public.email_confirmation_tokens
   FOR UPDATE
   USING (auth.uid() = user_id);
+
+-- Policy: Allow updating tokens by token value (to mark as used during confirmation)
+-- This allows unauthenticated users to mark their token as used after confirmation
+CREATE POLICY "Allow token update for email confirmation"
+  ON public.email_confirmation_tokens
+  FOR UPDATE
+  USING (
+    expires_at > NOW() 
+    AND used = FALSE
+  )
+  WITH CHECK (
+    expires_at > NOW()
+  );
 
 -- ============================================
 -- 3. Create Indexes for Better Performance

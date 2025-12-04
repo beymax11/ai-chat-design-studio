@@ -184,6 +184,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const confirmEmail = async (token: string) => {
     try {
+      console.log('Confirming email with token:', token.substring(0, 20) + '...');
+      
       // Find the token in the database
       const { data: tokenData, error: tokenError } = await supabase
         .from('email_confirmation_tokens')
@@ -192,7 +194,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('used', false)
         .single();
 
-      if (tokenError || !tokenData) {
+      console.log('Token query result:', { 
+        hasData: !!tokenData, 
+        error: tokenError,
+        errorCode: tokenError?.code,
+        errorMessage: tokenError?.message,
+        errorDetails: tokenError?.details,
+        errorHint: tokenError?.hint
+      });
+
+      if (tokenError) {
+        // Handle specific error codes
+        if (tokenError.code === 'PGRST116' || tokenError.message?.includes('No rows')) {
+          return { error: { message: 'Invalid or expired confirmation token' } };
+        }
+        if (tokenError.code === 'PGRST301' || tokenError.message?.includes('406')) {
+          return { 
+            error: { 
+              message: 'Database access denied. Please check RLS policies or contact support.',
+              details: tokenError.message 
+            } 
+          };
+        }
+        return { 
+          error: { 
+            message: tokenError.message || 'Failed to verify token',
+            details: tokenError.details,
+            hint: tokenError.hint
+          } 
+        };
+      }
+
+      if (!tokenData) {
         return { error: { message: 'Invalid or expired confirmation token' } };
       }
 
@@ -202,11 +235,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: { message: 'Confirmation token has expired' } };
       }
 
+      console.log('Token found, marking as used and updating profile...');
+
       // Mark token as used
-      await supabase
+      const { error: updateTokenError } = await supabase
         .from('email_confirmation_tokens')
         .update({ used: true })
         .eq('id', tokenData.id);
+
+      if (updateTokenError) {
+        console.error('Error marking token as used:', updateTokenError);
+        // Continue anyway - we'll still try to update the profile
+      }
 
       // Update user's email_verified status in profiles
       const { error: profileError } = await supabase
@@ -216,14 +256,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (profileError) {
         console.error('Error updating profile:', profileError);
+        // Don't fail completely - token is marked as used, profile update can be retried
+        return { 
+          error: { 
+            message: 'Token verified but failed to update profile. Please contact support.',
+            details: profileError.message 
+          } 
+        };
       }
+
+      console.log('Email confirmation successful!');
 
       // Note: Supabase handles email confirmation automatically through their auth system
       // We've updated the profile's email_verified field, which is what we use in the app
 
       return { error: null, success: true };
     } catch (error: any) {
-      return { error: { message: error.message || 'Failed to confirm email' } };
+      console.error('Unexpected error in confirmEmail:', error);
+      return { 
+        error: { 
+          message: error.message || 'Failed to confirm email',
+          details: error.stack 
+        } 
+      };
     }
   };
 
