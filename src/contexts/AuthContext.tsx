@@ -147,17 +147,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     }
 
+    // IMPORTANT: Sign out the user immediately after signup to prevent auto-login
+    // User must confirm their email before they can login
+    await supabase.auth.signOut();
+
     return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    // First, try to sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       return { error };
+    }
+
+    // If sign in successful, check if email is verified
+    if (data.user) {
+      // Get user's profile to check email_verified status
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email_verified')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // If we can't check the profile, sign out and return error
+        await supabase.auth.signOut();
+        return { 
+          error: { 
+            message: 'Unable to verify email status. Please try again or contact support.' 
+          } 
+        };
+      }
+
+      // Check if email is verified
+      // Handle case where email_verified might be null (defaults to false)
+      const isEmailVerified = profile?.email_verified === true;
+      
+      if (!profile) {
+        console.error('Profile not found for user:', data.user.id);
+        await supabase.auth.signOut();
+        return { 
+          error: { 
+            message: 'User profile not found. Please contact support.' 
+          } 
+        };
+      }
+
+      if (!isEmailVerified) {
+        // Email not verified, sign out the user
+        await supabase.auth.signOut();
+        return { 
+          error: { 
+            message: 'Please confirm your email address before logging in. Check your inbox for the confirmation email.' 
+          } 
+        };
+      }
     }
 
     return { error: null };
@@ -235,9 +285,93 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: { message: 'Confirmation token has expired' } };
       }
 
-      console.log('Token found, marking as used and updating profile...');
+      console.log('Token found, updating email_verified to TRUE...');
 
-      // Mark token as used
+      // IMPORTANT: Update user's email_verified status to TRUE in profiles
+      // This is the main trigger that sets email_verified = TRUE when email is confirmed
+      // Using database function to bypass RLS since user is not authenticated during email confirmation
+      console.log('Setting email_verified = TRUE for user:', tokenData.user_id);
+      console.log('Calling verify_user_email function...');
+      
+      const { data: verifyResult, error: verifyError } = await supabase
+        .rpc('verify_user_email', { user_id_param: tokenData.user_id });
+
+      console.log('RPC call result:', { verifyResult, verifyError });
+
+      if (verifyError) {
+        console.error('❌ Error verifying email via function:', verifyError);
+        console.error('Error details:', JSON.stringify(verifyError, null, 2));
+        
+        // Try direct update as fallback (might fail due to RLS, but worth trying)
+        console.log('Attempting fallback: direct update to profiles table...');
+        const { error: profileError, data: profileData } = await supabase
+          .from('profiles')
+          .update({ email_verified: true })
+          .eq('id', tokenData.user_id)
+          .select();
+
+        if (profileError) {
+          console.error('❌ Error updating profile (fallback):', profileError);
+          return { 
+            error: { 
+              message: 'Token verified but failed to update email_verified status. Please contact support.',
+              details: profileError.message 
+            } 
+          };
+        }
+        
+        console.log('✅ Fallback update successful:', profileData);
+      } else {
+        // Check the result from the function
+        if (verifyResult && typeof verifyResult === 'object') {
+          const result = verifyResult as any;
+          if (result.success === false) {
+            console.error('❌ Function returned success: false', result);
+            return {
+              error: {
+                message: result.message || 'Failed to verify email',
+                details: result.error_code || 'Unknown error'
+              }
+            };
+          }
+          console.log('✅ Email verification function executed successfully:', result);
+        } else {
+          console.log('✅ Email verification function executed. Result:', verifyResult);
+        }
+        
+        // Wait a bit for the update to propagate
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify that email_verified was actually set to TRUE
+        console.log('Verifying email_verified status...');
+        const { data: verifyCheck, error: checkError } = await supabase
+          .from('profiles')
+          .select('email_verified, id')
+          .eq('id', tokenData.user_id)
+          .single();
+        
+        console.log('Verification check result:', { verifyCheck, checkError });
+        
+        if (checkError) {
+          console.error('❌ Error checking verification status:', checkError);
+        } else if (verifyCheck) {
+          console.log('📊 Current email_verified status:', verifyCheck.email_verified);
+          if (verifyCheck.email_verified !== true) {
+            console.warn('⚠️ WARNING: email_verified is not TRUE after update! Current value:', verifyCheck.email_verified);
+            console.log('Retrying verification...');
+            // Try one more time
+            const { data: retryResult, error: retryError } = await supabase
+              .rpc('verify_user_email', { user_id_param: tokenData.user_id });
+            console.log('Retry result:', { retryResult, retryError });
+          } else {
+            console.log('✅ email_verified is confirmed to be TRUE!');
+          }
+        }
+      }
+
+      // Mark token as used AFTER successfully updating email_verified
+      // The trigger will also ensure email_verified = TRUE as a backup
+      console.log('Marking confirmation token as used...');
       const { error: updateTokenError } = await supabase
         .from('email_confirmation_tokens')
         .update({ used: true })
@@ -245,27 +379,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (updateTokenError) {
         console.error('Error marking token as used:', updateTokenError);
-        // Continue anyway - we'll still try to update the profile
+        // Don't fail - email_verified is already set to TRUE
+        // Token can be marked as used later if needed
+      } else {
+        console.log('Token marked as used successfully');
       }
 
-      // Update user's email_verified status in profiles
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ email_verified: true })
-        .eq('id', tokenData.user_id);
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError);
-        // Don't fail completely - token is marked as used, profile update can be retried
-        return { 
-          error: { 
-            message: 'Token verified but failed to update profile. Please contact support.',
-            details: profileError.message 
-          } 
-        };
-      }
-
-      console.log('Email confirmation successful!');
+      console.log('Email confirmation successful! email_verified is now TRUE');
 
       // Note: Supabase handles email confirmation automatically through their auth system
       // We've updated the profile's email_verified field, which is what we use in the app
