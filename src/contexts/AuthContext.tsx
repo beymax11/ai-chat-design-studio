@@ -22,12 +22,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Handle OAuth callback with hash fragments
+    const handleAuthCallback = async () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const error = hashParams.get('error');
+      const errorDescription = hashParams.get('error_description');
+
+      if (error) {
+        console.error('OAuth error:', error, errorDescription);
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
+      if (accessToken) {
+        // Exchange the code/token for a session
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+        }
+        
+        // Clean up the URL by removing hash fragments
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
+
+    // Handle OAuth callback
+    handleAuthCallback();
 
     // Listen for auth changes
     const {
@@ -214,10 +244,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    // Get the current origin
+    const currentOrigin = window.location.origin;
+    
+    // Get production URL from environment variables
+    const productionUrl = import.meta.env.VITE_NETLIFY_SITE_URL || import.meta.env.VITE_SITE_URL;
+    
+    // Determine redirect URL:
+    // - If we're on localhost, use localhost (for development)
+    // - If we're in production, use production URL if available, otherwise use current origin
+    // - This ensures production always uses the correct URL
+    const isLocalhost = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1');
+    const redirectTo = isLocalhost 
+      ? currentOrigin 
+      : (productionUrl || currentOrigin);
+    
+    console.log('Google OAuth redirect URL:', redirectTo);
+    console.log('Current origin:', currentOrigin);
+    console.log('Production URL:', productionUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}`,
+        redirectTo: redirectTo,
       },
     });
 
