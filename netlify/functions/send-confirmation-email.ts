@@ -8,24 +8,63 @@ interface EmailRequest {
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+  // Get the origin from the request headers for CORS (case-insensitive check)
+  // HTTP headers can be lowercase or mixed case
+  const requestOrigin = event.headers.origin || 
+                       event.headers.Origin || 
+                       event.headers['ORIGIN'] ||
+                       '';
+  
+  const allowedOrigins = [
+    'http://localhost:8080',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'https://bugbounty-ai.netlify.app',
+  ];
+  
+  // Normalize origin for comparison (remove trailing slash, convert to lowercase)
+  const normalizedOrigin = requestOrigin.toLowerCase().replace(/\/$/, '');
+  const normalizedAllowed = allowedOrigins.map(o => o.toLowerCase().replace(/\/$/, ''));
+  
+  // Use the request origin if it's in the allowed list, otherwise use wildcard
+  const corsOrigin = requestOrigin && normalizedAllowed.includes(normalizedOrigin)
+    ? requestOrigin 
+    : '*';
+  
   // Add CORS headers to all responses
   const corsHeaders: Record<string, string> = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
     'Access-Control-Max-Age': '86400',
-    'Content-Type': 'application/json',
   };
+  
+  // Only add credentials header if not using wildcard
+  if (corsOrigin !== '*') {
+    corsHeaders['Access-Control-Allow-Credentials'] = 'true';
+  }
 
-  // Handle CORS preflight requests FIRST
+  // Handle CORS preflight requests FIRST - this is critical!
   if (event.httpMethod === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
+    console.log('Handling OPTIONS preflight request', { 
+      requestOrigin, 
+      corsOrigin, 
+      method: event.httpMethod,
+      normalizedOrigin,
+      allHeaders: Object.keys(event.headers)
+    });
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: '',
     };
   }
+  
+  // Add Content-Type for non-OPTIONS requests
+  corsHeaders['Content-Type'] = 'application/json';
 
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
