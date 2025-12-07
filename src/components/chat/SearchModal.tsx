@@ -103,9 +103,7 @@ export const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
             >
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-primary/20 rounded-full blur-xl" />
-                <div className="relative bg-gradient-to-br from-purple-500 via-primary to-purple-600 p-4 rounded-2xl shadow-lg">
-                  <Search className="h-8 w-8 text-primary-foreground" />
-                </div>
+                
               </div>
             </motion.div>
 

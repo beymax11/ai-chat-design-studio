@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Bell, Shield, User, Eye, EyeOff, LogOut, Mail, UserCircle, Volume2, VolumeX } from 'lucide-react';
+import { X, Settings, Bell, Shield, User, Eye, EyeOff, LogOut, Mail, UserCircle, Volume2, VolumeX, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -57,6 +57,8 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Notification settings state
   const [browserNotifications, setBrowserNotifications] = useState(() => {
@@ -251,6 +253,225 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    setDeletingAccount(true);
+    try {
+      const userId = user.id;
+
+      // Delete all user data in order (respecting foreign key constraints)
+      
+      // 1. Delete all messages (via conversations)
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (conversations && conversations.length > 0) {
+        const conversationIds = conversations.map(c => c.id);
+        const { error: messagesError } = await supabase
+          .from('messages')
+          .delete()
+          .in('conversation_id', conversationIds);
+
+        if (messagesError) {
+          console.error('Error deleting messages:', messagesError);
+        }
+      }
+
+      // 2. Delete all conversations
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', userId);
+
+      if (conversationsError) {
+        console.error('Error deleting conversations:', conversationsError);
+      }
+
+      // 3. Delete all project_conversations (via projects)
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (projects && projects.length > 0) {
+        const projectIds = projects.map(p => p.id);
+        const { error: projectConversationsError } = await supabase
+          .from('project_conversations')
+          .delete()
+          .in('project_id', projectIds);
+
+        if (projectConversationsError) {
+          console.error('Error deleting project_conversations:', projectConversationsError);
+        }
+      }
+
+      // 4. Delete all projects
+      const { error: projectsError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('user_id', userId);
+
+      if (projectsError) {
+        console.error('Error deleting projects:', projectsError);
+      }
+
+      // 5. Delete email confirmation tokens
+      const { error: tokensError } = await supabase
+        .from('email_confirmation_tokens')
+        .delete()
+        .eq('user_id', userId);
+
+      if (tokensError) {
+        console.error('Error deleting email confirmation tokens:', tokensError);
+      }
+
+      // 6. Delete profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Error deleting profile:', profileError);
+      }
+
+      // 7. Delete auth user permanently via Netlify function
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('No active session found');
+      }
+
+      // Determine function URL
+      const productionBaseUrl = import.meta.env.VITE_NETLIFY_SITE_URL || 'https://bugbounty-ai.netlify.app';
+      const currentOrigin = window.location.origin;
+      const isLocalhost = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1');
+      
+      // For localhost, try local function first, then fallback to production
+      let functionUrl: string;
+      if (isLocalhost) {
+        // Try local Netlify dev server first (port 8888 is default)
+        functionUrl = 'http://localhost:8888/.netlify/functions/delete-account';
+      } else {
+        functionUrl = `${currentOrigin}/.netlify/functions/delete-account`;
+      }
+
+      let deleteResponse: Response;
+      let deleteError: any = null;
+
+      try {
+        deleteResponse = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userId,
+            accessToken: session.session.access_token,
+          }),
+        });
+      } catch (fetchError: any) {
+        // If local function fails and we're on localhost, try production
+        if (isLocalhost && fetchError.message?.includes('Failed to fetch')) {
+          console.log('Local function not available, trying production...');
+          functionUrl = `${productionBaseUrl}/.netlify/functions/delete-account`;
+          try {
+            deleteResponse = await fetch(functionUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: userId,
+                accessToken: session.session.access_token,
+              }),
+            });
+          } catch (prodError: any) {
+            deleteError = prodError;
+            deleteResponse = null as any;
+          }
+        } else {
+          deleteError = fetchError;
+          deleteResponse = null as any;
+        }
+      }
+
+      if (deleteError || !deleteResponse) {
+        const errorMessage = deleteError?.message || 'Failed to connect to delete account service';
+        console.error('Error calling delete-account function:', {
+          error: deleteError,
+          functionUrl,
+          isLocalhost,
+        });
+        
+        // Provide helpful error message
+        if (isLocalhost) {
+          throw new Error(
+            `${errorMessage}. For local development, please run 'netlify dev' in a separate terminal to start the functions server. ` +
+            `Alternatively, the function will work automatically when deployed to Netlify.`
+          );
+        } else {
+          throw new Error(
+            `${errorMessage}. The delete account function may not be deployed yet. Please contact support or try again later.`
+          );
+        }
+      }
+
+      if (!deleteResponse.ok) {
+        let errorData: any;
+        try {
+          const text = await deleteResponse.text();
+          errorData = text ? JSON.parse(text) : {};
+        } catch {
+          errorData = { error: `Server returned ${deleteResponse.status}: ${deleteResponse.statusText}` };
+        }
+        console.error('Delete account function error:', {
+          status: deleteResponse.status,
+          statusText: deleteResponse.statusText,
+          errorData,
+          functionUrl,
+        });
+        
+        // Provide specific error messages based on status code
+        if (deleteResponse.status === 404) {
+          throw new Error(
+            'Delete account function not found. If running locally, start with "netlify dev". ' +
+            'If deployed, ensure the function is deployed to Netlify.'
+          );
+        }
+        
+        throw new Error(errorData.error || errorData.details || `Failed to delete account (${deleteResponse.status})`);
+      }
+
+      // 8. Sign out (this will log the user out)
+      await signOut();
+
+      // 9. Close modals
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+
+      toast({
+        title: 'Account deleted',
+        description: 'Your account and all associated data have been permanently deleted.',
+      });
+
+      // 10. Refresh page after a short delay to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: 'Error deleting account',
+        description: error.message || 'Failed to delete account. Please try again or contact support.',
+        variant: 'destructive',
+      });
+      setDeletingAccount(false);
+    }
+  };
+
   const handleLanguageChange = (value: string) => {
     const langCode = value as LanguageCode;
     setLanguage(langCode);
@@ -271,7 +492,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[85vh] max-h-[90vh] p-0 flex flex-col sm:flex-row [&>button]:hidden max-w-[95vw] overflow-hidden">
+      <DialogContent className="sm:max-w-[900px] max-w-[95vw] mx-4 h-[85vh] max-h-[90vh] p-0 flex flex-col sm:flex-row overflow-hidden">
         {/* Sidebar Navigation */}
         <div className="w-full sm:w-72 border-b sm:border-b-0 sm:border-r border-border bg-muted/30 flex flex-row sm:flex-col overflow-x-auto sm:overflow-x-visible">
           <div className="p-4 sm:p-6 flex items-center justify-between sm:flex-col sm:justify-start min-w-0 sm:min-w-[288px] sm:h-full">
@@ -916,6 +1137,27 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                             Sign Out
                           </Button>
                         </div>
+
+                        <Separator />
+
+                        {/* Delete Account */}
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-lg font-semibold mb-1 text-destructive">Delete Account</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Permanently delete your account and all associated data. This action cannot be undone.
+                            </p>
+                          </div>
+
+                          <Button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            variant="destructive"
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Account
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -925,6 +1167,61 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           </div>
         </div>
       </DialogContent>
+
+      {/* Delete Account Confirmation Modal */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-destructive">
+              Delete Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to permanently delete your account? This action cannot be undone and will:
+            </p>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+              <li>Delete all your conversations and messages</li>
+              <li>Delete all your projects</li>
+              <li>Delete your profile information</li>
+              <li>Permanently remove your account</li>
+            </ul>
+            <p className="text-sm font-medium text-foreground pt-2">
+              This action is permanent and cannot be reversed.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deletingAccount}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+            >
+              {deletingAccount ? (
+                <span className="flex items-center gap-2">
+                  <motion.div
+                    className="h-4 w-4 border-2 border-destructive-foreground/30 border-t-destructive-foreground rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                  />
+                  Deleting...
+                </span>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Account
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

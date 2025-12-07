@@ -199,7 +199,7 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-4 text-muted-foreground font-medium tracking-wider">
-                  Or continue with email
+                  Or continue with email or username
                 </span>
               </div>
             </motion.div>
@@ -213,7 +213,7 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
                 className="space-y-2"
               >
                 <Label htmlFor="login-email" className="text-sm font-medium text-foreground/90">
-                  Email address
+                  Email or Username
                 </Label>
                 <div className="relative group">
                   <Mail className={cn(
@@ -222,8 +222,8 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
                   )} />
                   <Input
                     id="login-email"
-                    type="email"
-                    placeholder="you@example.com"
+                    type="text"
+                    placeholder="Email or Username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onFocus={() => setEmailFocused(true)}
@@ -286,43 +286,56 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
                       "bg-background/50 backdrop-blur-sm"
                     )}
                   />
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || googleLoading}
-                    className={cn(
-                      "absolute right-4 top-1/2 -translate-y-1/2",
-                      "text-muted-foreground hover:text-foreground transition-colors",
-                      "disabled:opacity-50 p-1 rounded-lg hover:bg-accent/50"
-                    )}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    tabIndex={-1}
+                  <div 
+                    className="absolute right-4 top-1/2 w-8 h-8"
+                    style={{ 
+                      transform: 'translateY(-50%)',
+                      willChange: 'auto'
+                    }}
                   >
-                    <AnimatePresence mode="wait">
-                      {showPassword ? (
-                        <motion.div
-                          key="eye-off"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <EyeOff className="h-5 w-5" />
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="eye"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Eye className="h-5 w-5" />
-                        </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading || googleLoading}
+                      className={cn(
+                        "w-full h-full",
+                        "text-muted-foreground hover:text-foreground transition-colors duration-200",
+                        "disabled:opacity-50 rounded-lg hover:bg-accent/50",
+                        "flex items-center justify-center",
+                        "outline-none focus:outline-none",
+                        "touch-none select-none"
                       )}
-                    </AnimatePresence>
-                  </motion.button>
+                      tabIndex={-1}
+                    >
+                    <div className="w-5 h-5 flex items-center justify-center pointer-events-none">
+                      <AnimatePresence mode="wait">
+                        {showPassword ? (
+                          <motion.div
+                            key="eye-off"
+                            initial={{ opacity: 0, rotate: -180 }}
+                            animate={{ opacity: 1, rotate: 0 }}
+                            exit={{ opacity: 0, rotate: 180 }}
+                            transition={{ duration: 0.2 }}
+                            className="w-5 h-5 flex items-center justify-center"
+                          >
+                            <EyeOff className="h-5 w-5" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="eye"
+                            initial={{ opacity: 0, rotate: -180 }}
+                            animate={{ opacity: 1, rotate: 0 }}
+                            exit={{ opacity: 0, rotate: 180 }}
+                            transition={{ duration: 0.2 }}
+                            className="w-5 h-5 flex items-center justify-center"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </button>
+                  </div>
                   <AnimatePresence>
                     {passwordFocused && (
                       <motion.div
@@ -384,10 +397,13 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.8 }}
-              className="mt-6 text-center text-xs text-muted-foreground"
+              transition={{ duration: 0.4, delay: 1.0 }}
+              className="mt-6 text-center text-xs text-muted-foreground leading-relaxed"
             >
-              By continuing, you agree to our Terms of Service and Privacy Policy
+              By logging in, you agree to our{' '}
+              <span className="text-primary hover:underline cursor-pointer">Terms of Service</span>
+              {' '}and{' '}
+              <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>
             </motion.p>
           </div>
         </div>

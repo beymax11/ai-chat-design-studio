@@ -1,9 +1,21 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { Conversation, Message, FileAttachment } from '@/types/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { detectLanguageRequest } from '@/lib/languageDetection';
 import { translateText, LanguageCode } from '@/contexts/TranslationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  loadConversationsFromSupabase,
+  saveConversationToSupabase,
+  saveMessagesToSupabase,
+  deleteConversationFromSupabase,
+  clearAllConversationsFromSupabase,
+  loadProjectsFromSupabase,
+  saveProjectToSupabase,
+  deleteProjectFromSupabase,
+  addConversationToProjectInSupabase,
+  removeConversationFromProjectInSupabase,
+} from '@/lib/supabaseChat';
 
 export interface Project {
   id: string;
@@ -43,8 +55,13 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const hasLoadedFromSupabase = useRef(false);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const hasLoadedProjectsFromSupabase = useRef(false);
+  const isManuallySavingProject = useRef(false);
   
-  // Initialize conversations from localStorage
+  // Initialize conversations from localStorage (temporary, will be replaced by Supabase)
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(CONVERSATIONS_STORAGE_KEY);
@@ -102,12 +119,81 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isTyping, setIsTyping] = useState(false);
   
-  // Persist conversations to localStorage whenever they change (only if user is logged in)
+  // Load conversations from Supabase when user logs in
   useEffect(() => {
-    if (typeof window !== 'undefined' && conversations.length > 0 && user) {
-      localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
+    if (!authLoading && user && !hasLoadedFromSupabase.current) {
+      setIsLoadingConversations(true);
+      hasLoadedFromSupabase.current = true;
+      
+      loadConversationsFromSupabase(user.id)
+        .then((loadedConversations) => {
+          if (loadedConversations.length > 0) {
+            setConversations(loadedConversations);
+            // Set the first conversation as current, or the one from localStorage if it exists
+            const currentId = typeof window !== 'undefined' 
+              ? localStorage.getItem(CURRENT_CONVERSATION_ID_KEY) 
+              : null;
+            const targetConv = currentId 
+              ? loadedConversations.find(c => c.id === currentId) || loadedConversations[0]
+              : loadedConversations[0];
+            setCurrentConversation(targetConv);
+          }
+          setIsLoadingConversations(false);
+        })
+        .catch((error) => {
+          console.error('Error loading conversations from Supabase:', error);
+          setIsLoadingConversations(false);
+        });
+    } else if (!authLoading && !user) {
+      // Reset the flag when user logs out
+      hasLoadedFromSupabase.current = false;
     }
-  }, [conversations, user]);
+  }, [user, authLoading]);
+
+  // Load projects from Supabase when user logs in
+  useEffect(() => {
+    if (!authLoading && user && !hasLoadedProjectsFromSupabase.current) {
+      setIsLoadingProjects(true);
+      hasLoadedProjectsFromSupabase.current = true;
+      
+      loadProjectsFromSupabase(user.id)
+        .then((loadedProjects) => {
+          // Always set projects from Supabase (even if empty) to clear any localStorage data
+          setProjects(loadedProjects);
+          // Clear localStorage projects since we're loading from Supabase
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(loadedProjects));
+          }
+          setIsLoadingProjects(false);
+        })
+        .catch((error) => {
+          console.error('Error loading projects from Supabase:', error);
+          setIsLoadingProjects(false);
+        });
+    } else if (!authLoading && !user) {
+      // Reset the flag when user logs out
+      hasLoadedProjectsFromSupabase.current = false;
+    }
+  }, [user, authLoading]);
+
+  // Persist conversations to Supabase and localStorage whenever they change (only if user is logged in)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user && !isLoadingConversations && hasLoadedFromSupabase.current) {
+      // Save to localStorage as backup
+      if (conversations.length > 0) {
+        localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
+      }
+      
+      // Save each conversation to Supabase
+      conversations.forEach(async (conversation) => {
+        await saveConversationToSupabase(user.id, conversation);
+        // Save messages for this conversation
+        if (conversation.messages.length > 0) {
+          await saveMessagesToSupabase(conversation.id, conversation.messages);
+        }
+      });
+    }
+  }, [conversations, user, isLoadingConversations]);
 
   // Persist current conversation ID to localStorage (only if user is logged in)
   useEffect(() => {
@@ -116,7 +202,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentConversation, user]);
   
-  // Initialize projects from localStorage
+  // Initialize projects from localStorage (temporary, will be replaced by Supabase)
   const [projects, setProjects] = useState<Project[]>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
@@ -136,12 +222,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return [];
   });
 
-  // Persist projects to localStorage
+  // Persist projects to Supabase and localStorage whenever they change (only if user is logged in)
+  // Skip if we're manually saving to avoid race conditions
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isManuallySavingProject.current) {
+      return;
+    }
+    
+    if (typeof window !== 'undefined' && user && !isLoadingProjects && hasLoadedProjectsFromSupabase.current) {
+      // Save to localStorage as backup
+      if (projects.length > 0) {
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+      }
+      
+      // Save each project to Supabase
+      projects.forEach(async (project) => {
+        await saveProjectToSupabase(user.id, project);
+      });
+    } else if (typeof window !== 'undefined' && !user) {
+      // Save to localStorage only if user is not logged in
       localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
     }
-  }, [projects]);
+  }, [projects, user, isLoadingProjects]);
 
   // Clear conversations when user is not logged in (only after auth has finished loading)
   useEffect(() => {
@@ -162,6 +264,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         conversationIds: [],
         updatedAt: new Date(),
       })));
+      
+      // Reset the Supabase loading flags
+      hasLoadedFromSupabase.current = false;
+      hasLoadedProjectsFromSupabase.current = false;
     }
   }, [user, authLoading]);
   
@@ -463,12 +569,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversation(newConversation);
-  }, [selectedModel]);
+    
+    // Immediately save to Supabase if user is logged in
+    if (user && hasLoadedFromSupabase.current) {
+      saveConversationToSupabase(user.id, newConversation).catch(error => {
+        console.error('Error saving new conversation to Supabase:', error);
+      });
+    }
+  }, [selectedModel, user]);
 
   const switchConversation = useCallback((id: string) => {
     const conversation = conversations.find(c => c.id === id);
     if (conversation) {
-      setCurrentConversation(conversation);
+      // Create a new object reference to ensure React detects the change
+      // This is important especially when there's only one conversation
+      setCurrentConversation({
+        ...conversation,
+        messages: [...conversation.messages],
+      });
     }
   }, [conversations]);
 
@@ -686,7 +804,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentConversation, selectedModel]);
 
-  const deleteConversation = useCallback((id: string) => {
+  const deleteConversation = useCallback(async (id: string) => {
+    // Delete from Supabase if user is logged in
+    if (user) {
+      await deleteConversationFromSupabase(id);
+    }
+    
     setConversations(prev => prev.filter(c => c.id !== id));
     // Remove conversation from all projects
     setProjects(prev => prev.map(project => ({
@@ -697,10 +820,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentConversation?.id === id) {
       setCurrentConversation(conversations[0] || null);
     }
-  }, [currentConversation, conversations]);
+  }, [currentConversation, conversations, user]);
 
-  const clearAllConversations = useCallback(() => {
-    // Clear from localStorage first
+  const clearAllConversations = useCallback(async () => {
+    // Clear from Supabase if user is logged in
+    if (user) {
+      await clearAllConversationsFromSupabase(user.id);
+    }
+    
+    // Clear from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
       localStorage.removeItem(CURRENT_CONVERSATION_ID_KEY);
@@ -722,7 +850,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setConversations([newConversation]);
     setCurrentConversation(newConversation);
-  }, [selectedModel]);
+  }, [selectedModel, user]);
 
   const createProject = useCallback((name: string) => {
     const newProject: Project = {
@@ -733,35 +861,142 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date(),
     };
     setProjects(prev => [newProject, ...prev]);
-  }, []);
+    
+    // Immediately save to Supabase if user is logged in
+    if (user && hasLoadedProjectsFromSupabase.current) {
+      saveProjectToSupabase(user.id, newProject).catch(error => {
+        console.error('Error saving new project to Supabase:', error);
+      });
+    }
+  }, [user]);
 
   const deleteProject = useCallback((id: string) => {
+    // Delete from Supabase if user is logged in
+    if (user && hasLoadedProjectsFromSupabase.current) {
+      deleteProjectFromSupabase(id).catch(error => {
+        console.error('Error deleting project from Supabase:', error);
+      });
+    }
+    
     setProjects(prev => prev.filter(p => p.id !== id));
-  }, []);
+  }, [user]);
 
-  const addConversationToProject = useCallback((projectId: string, conversationId: string) => {
-    setProjects(prev => prev.map(project => 
-      project.id === projectId && !project.conversationIds.includes(conversationId)
-        ? {
-            ...project,
-            conversationIds: [...project.conversationIds, conversationId],
-            updatedAt: new Date(),
-          }
-        : project
-    ));
-  }, []);
+  const addConversationToProject = useCallback(async (projectId: string, conversationId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    
+    // If conversation already exists in project, don't do anything
+    if (project && project.conversationIds.includes(conversationId)) {
+      return;
+    }
+    
+    // Update state first
+    const updatedProject = project ? {
+      ...project,
+      conversationIds: [...project.conversationIds, conversationId],
+      updatedAt: new Date(),
+    } : null;
+    
+    if (!updatedProject) {
+      console.error('Project not found:', projectId);
+      return;
+    }
+    
+    // Set flag to prevent useEffect from running
+    isManuallySavingProject.current = true;
+    
+    // Update state and localStorage together
+    setProjects(prev => {
+      const updatedProjects = prev.map(p => 
+        p.id === projectId ? updatedProject : p
+      );
+      
+      // Update localStorage immediately with updated projects
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+      }
+      
+      return updatedProjects;
+    });
+    
+    // Immediately save the updated project to Supabase if user is logged in
+    if (user && hasLoadedProjectsFromSupabase.current) {
+      try {
+        const success = await saveProjectToSupabase(user.id, updatedProject);
+        if (!success) {
+          console.error('Failed to save project to Supabase, trying fallback...');
+          // Fallback: try the individual function if full save fails
+          await addConversationToProjectInSupabase(projectId, conversationId);
+        }
+      } catch (error) {
+        console.error('Error saving project to Supabase:', error);
+        // Fallback: try the individual function if full save fails
+        addConversationToProjectInSupabase(projectId, conversationId).catch(err => {
+          console.error('Error adding conversation to project in Supabase:', err);
+        });
+      } finally {
+        // Reset flag after save completes
+        isManuallySavingProject.current = false;
+      }
+    } else {
+      isManuallySavingProject.current = false;
+    }
+  }, [user, projects]);
 
-  const removeConversationFromProject = useCallback((projectId: string, conversationId: string) => {
-    setProjects(prev => prev.map(project => 
-      project.id === projectId
-        ? {
-            ...project,
-            conversationIds: project.conversationIds.filter(id => id !== conversationId),
-            updatedAt: new Date(),
-          }
-        : project
-    ));
-  }, []);
+  const removeConversationFromProject = useCallback(async (projectId: string, conversationId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    
+    if (!project) {
+      console.error('Project not found:', projectId);
+      return;
+    }
+    
+    // Update state first
+    const updatedProject = {
+      ...project,
+      conversationIds: project.conversationIds.filter(id => id !== conversationId),
+      updatedAt: new Date(),
+    };
+    
+    // Set flag to prevent useEffect from running
+    isManuallySavingProject.current = true;
+    
+    // Update state and localStorage together
+    setProjects(prev => {
+      const updatedProjects = prev.map(p => 
+        p.id === projectId ? updatedProject : p
+      );
+      
+      // Update localStorage immediately with updated projects
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+      }
+      
+      return updatedProjects;
+    });
+    
+    // Immediately save the updated project to Supabase if user is logged in
+    if (user && hasLoadedProjectsFromSupabase.current) {
+      try {
+        const success = await saveProjectToSupabase(user.id, updatedProject);
+        if (!success) {
+          console.error('Failed to save project to Supabase, trying fallback...');
+          // Fallback: try the individual function if full save fails
+          await removeConversationFromProjectInSupabase(projectId, conversationId);
+        }
+      } catch (error) {
+        console.error('Error saving project to Supabase:', error);
+        // Fallback: try the individual function if full save fails
+        removeConversationFromProjectInSupabase(projectId, conversationId).catch(err => {
+          console.error('Error removing conversation from project in Supabase:', err);
+        });
+      } finally {
+        // Reset flag after save completes
+        isManuallySavingProject.current = false;
+      }
+    } else {
+      isManuallySavingProject.current = false;
+    }
+  }, [user, projects]);
 
   return (
     <ChatContext.Provider

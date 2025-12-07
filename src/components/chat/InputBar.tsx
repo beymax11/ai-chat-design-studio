@@ -15,9 +15,11 @@ import { cn } from '@/lib/utils';
 
 interface InputBarProps {
   onSetInputRef?: (setInput: (value: string) => void) => void;
+  onSetFocusRef?: (fn: () => void) => void;
+  onSetFileUploadRef?: (fn: () => void) => void;
 }
 
-export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
+export const InputBar = ({ onSetInputRef, onSetFocusRef, onSetFileUploadRef }: InputBarProps = {}) => {
   const { sendMessage, currentConversation, isTyping, selectedModel, setSelectedModel } = useChat();
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
@@ -32,6 +34,25 @@ export const InputBar = ({ onSetInputRef }: InputBarProps = {}) => {
       });
     }
   }, [onSetInputRef]);
+
+  // Expose focus function
+  useEffect(() => {
+    if (onSetFocusRef) {
+      onSetFocusRef(() => {
+        textareaRef.current?.focus();
+      });
+    }
+  }, [onSetFocusRef]);
+
+  // Expose file upload function
+  useEffect(() => {
+    if (onSetFileUploadRef) {
+      onSetFileUploadRef(() => {
+        handleFileUpload();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSetFileUploadRef]);
 
   const convertFileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {

@@ -184,8 +184,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: null };
   };
 
-  const signIn = async (email: string, password: string) => {
-    // First, try to sign in
+  const signIn = async (emailOrUsername: string, password: string) => {
+    let email = emailOrUsername;
+    
+    // Check if input is a username (doesn't contain @) or email
+    const isEmail = emailOrUsername.includes('@');
+    
+    // If it's a username, look up the email from profiles table
+    if (!isEmail) {
+      try {
+        // Try using the database function first (more secure and reliable)
+        const { data: functionData, error: functionError } = await supabase
+          .rpc('get_email_by_username', { username_param: emailOrUsername.toLowerCase() });
+
+        if (!functionError && functionData && functionData.length > 0 && functionData[0]?.email) {
+          email = functionData[0].email;
+        } else {
+          // Fallback to direct table query if function doesn't exist or fails
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('username', emailOrUsername.toLowerCase())
+            .single();
+
+          if (profileError) {
+            console.error('Error looking up username:', profileError);
+            // If it's an RLS error (406), provide helpful message
+            if (profileError.code === 'PGRST301' || profileError.message?.includes('406') || profileError.message?.includes('Failed to fetch')) {
+              return { 
+                error: { 
+                  message: 'Unable to verify username. Please check your username or try logging in with your email. If the problem persists, contact support.' 
+                } 
+              };
+            }
+            // If username not found
+            if (profileError.code === 'PGRST116') {
+              return { 
+                error: { 
+                  message: 'Username not found. Please check your username or try logging in with your email.' 
+                } 
+              };
+            }
+            return { 
+              error: { 
+                message: profileError.message || 'Error looking up username. Please try again or use your email to login.' 
+              } 
+            };
+          }
+
+          if (!profile || !profile.email) {
+            return { 
+              error: { 
+                message: 'Username not found. Please check your username or try logging in with your email.' 
+              } 
+            };
+          }
+
+          email = profile.email;
+        }
+      } catch (error: any) {
+        console.error('Unexpected error looking up username:', error);
+        return { 
+          error: { 
+            message: 'Error looking up username. Please try again or use your email to login.' 
+          } 
+        };
+      }
+    }
+
+    // First, try to sign in with the email
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,

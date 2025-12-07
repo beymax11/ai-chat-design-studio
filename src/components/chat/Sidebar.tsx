@@ -1,14 +1,20 @@
-import { Plus, MessageSquare, MoreHorizontal, Trash2, ChevronRight, Search, Folder, User, Crown, Settings, HelpCircle, LogOut, Menu, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, MoreHorizontal, Trash2, ChevronRight, Search, Folder, User, Crown, Settings, HelpCircle, LogOut, Menu, Sparkles, BookOpen, FileText, Keyboard } from 'lucide-react';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { supabase } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import {
   Sheet,
@@ -22,7 +28,12 @@ import { SignUpModal } from './SignUpModal';
 import { SearchModal } from './SearchModal';
 import { ProjectsModal } from './ProjectsModal';
 import { UpgradePlanModal } from './UpgradePlanModal';
-import { useState } from 'react';
+import { EditProfileModal } from './EditProfileModal';
+import { HelpCenterModal } from './HelpCenterModal';
+import { TermsAndPoliciesModal } from './TermsAndPoliciesModal';
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
+import { useState, useEffect } from 'react';
+import { useKeyboardShortcuts } from '@/contexts/KeyboardShortcutsContext';
 
 interface SidebarProps {
   isCollapsed?: boolean;
@@ -43,12 +54,70 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
   } = useChat();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { 
+    isSearchOpen, setIsSearchOpen,
+    isProjectsOpen, setIsProjectsOpen,
+    isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen,
+    isSettingsOpen, setIsSettingsOpen
+  } = useKeyboardShortcuts();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isUpgradePlanOpen, setIsUpgradePlanOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+  const [isTermsAndPoliciesOpen, setIsTermsAndPoliciesOpen] = useState(false);
+  const [termsAndPoliciesSection, setTermsAndPoliciesSection] = useState<'terms' | 'privacy'>('terms');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Load user profile picture
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (!user) {
+        setAvatarUrl(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading avatar:', error);
+          return;
+        }
+
+        setAvatarUrl(data?.avatar_url || null);
+      } catch (error) {
+        console.error('Error loading avatar:', error);
+      }
+    };
+
+    loadAvatar();
+
+    // Listen for profile updates
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user?.id}`,
+        },
+        (payload) => {
+          setAvatarUrl(payload.new.avatar_url || null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     // Clear all conversations and create a new chat
@@ -88,11 +157,9 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
+              
               <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                BugBounty AI
+                BugBounty
               </h1>
             </motion.div>
             {!isMobile && onToggle && (
@@ -186,6 +253,7 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
                       transition-all duration-200
                       flex items-center gap-2.5
                       relative overflow-hidden
+                      cursor-pointer z-10
                       ${
                         currentConversation?.id === conversation.id
                           ? 'bg-primary/10 text-foreground font-medium shadow-sm'
@@ -206,30 +274,35 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
                     <span className="truncate flex-1">{conversation.title}</span>
                   </button>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`
-                          absolute right-1 top-1/2 -translate-y-1/2
-                          h-7 w-7 p-0 opacity-0 group-hover:opacity-100
-                          transition-all duration-200 hover:bg-accent/70
-                        `}
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={() => deleteConversation(conversation.id)}
-                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 pointer-events-none group-hover:pointer-events-auto">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`
+                            h-7 w-7 p-0 opacity-0 group-hover:opacity-100
+                            transition-all duration-200 hover:bg-accent/70
+                          `}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteConversation(conversation.id);
+                          }}
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -249,21 +322,48 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={`group w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground ${isCollapsed && !isMobile ? 'justify-center' : ''}`}>
-              <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 group-data-[state=open]:from-primary/40 group-data-[state=open]:to-primary/30 flex items-center justify-center flex-shrink-0 transition-all duration-200 shadow-sm group-hover:shadow-md">
-                <User className="w-4 h-4 text-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-colors" />
-                {user && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-                )}
-              </div>
+              <Avatar className="relative w-9 h-9 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-200 border-2 border-transparent group-hover:border-primary/20 group-data-[state=open]:border-primary/40">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={userName} className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 group-data-[state=open]:from-primary/40 group-data-[state=open]:to-primary/30">
+                  <User className="w-4 h-4 text-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white transition-colors" />
+                </AvatarFallback>
+              </Avatar>
               {(!isCollapsed || isMobile) && (
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-semibold text-foreground group-hover:text-accent-foreground group-data-[state=open]:text-white truncate transition-colors">{userName}</p>
-                  <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80 group-data-[state=open]:text-white/80 truncate transition-colors">{userEmail}</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80 group-data-[state=open]:text-white/80 truncate transition-colors">Free Plan</p>
                 </div>
               )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            {/* Profile Info Section */}
+            {user && (
+              <>
+                <div 
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="px-2 py-2.5 border-b border-border/50 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 flex-shrink-0 shadow-sm">
+                      {avatarUrl ? (
+                        <AvatarImage src={avatarUrl} alt={userName} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10">
+                        <User className="w-5 h-5 text-foreground" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{userName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                    </div>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => setIsUpgradePlanOpen(true)} className="cursor-pointer">
               <Crown className="w-4 h-4 mr-2" />
               Upgrade Plan
@@ -272,21 +372,83 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
-              <HelpCircle className="w-4 h-4 mr-2" />
-              Help
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             {user ? (
-              <DropdownMenuItem 
-                className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer">
+                    <HelpCircle className="w-4 h-4 mr-2" />
+                    Help
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent {...({ side: "top", align: "end", sideOffset: 12, alignOffset: -36 } as any)}>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => setIsHelpCenterOpen(true)}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Help Center
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setTermsAndPoliciesSection('terms');
+                        setIsTermsAndPoliciesOpen(true);
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Terms & Policies
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => setIsKeyboardShortcutsOpen(true)}
+                    >
+                      <Keyboard className="w-4 h-4 mr-2" />
+                      Keyboard Shortcuts
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </>
             ) : (
               <>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer">
+                    <HelpCircle className="w-4 h-4 mr-2" />
+                    Help
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent {...({ side: "top", align: "end", sideOffset: 12, alignOffset: -36 } as any)}>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => setIsHelpCenterOpen(true)}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Help Center
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setTermsAndPoliciesSection('terms');
+                        setIsTermsAndPoliciesOpen(true);
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Terms & Policies
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => setIsKeyboardShortcutsOpen(true)}
+                    >
+                      <Keyboard className="w-4 h-4 mr-2" />
+                      Keyboard Shortcuts
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem onClick={() => setIsLoginOpen(true)} className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
                   Login
@@ -306,6 +468,38 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
         <ProjectsModal open={isProjectsOpen} onOpenChange={setIsProjectsOpen} />
         <UpgradePlanModal open={isUpgradePlanOpen} onOpenChange={setIsUpgradePlanOpen} />
+        <EditProfileModal 
+          open={isEditProfileOpen} 
+          onOpenChange={(open) => {
+            setIsEditProfileOpen(open);
+            // Reload avatar when modal closes after saving
+            if (!open && user) {
+              supabase
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', user.id)
+                .single()
+                .then(({ data }) => {
+                  if (data) {
+                    setAvatarUrl(data.avatar_url || null);
+                  }
+                });
+            }
+          }} 
+        />
+        <HelpCenterModal 
+          open={isHelpCenterOpen} 
+          onOpenChange={setIsHelpCenterOpen}
+        />
+        <TermsAndPoliciesModal 
+          open={isTermsAndPoliciesOpen} 
+          onOpenChange={setIsTermsAndPoliciesOpen}
+          initialSection={termsAndPoliciesSection}
+        />
+        <KeyboardShortcutsModal 
+          open={isKeyboardShortcutsOpen} 
+          onOpenChange={setIsKeyboardShortcutsOpen}
+        />
       </div>
     </>
   );

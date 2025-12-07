@@ -299,7 +299,7 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="Email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onFocus={() => setEmailFocused(true)}
@@ -364,43 +364,56 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                       "bg-background/50 backdrop-blur-sm"
                     )}
                   />
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || googleLoading}
-                    className={cn(
-                      "absolute right-4 top-1/2 -translate-y-1/2",
-                      "text-muted-foreground hover:text-foreground transition-colors",
-                      "disabled:opacity-50 p-1 rounded-lg hover:bg-accent/50"
-                    )}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    tabIndex={-1}
+                  <div 
+                    className="absolute right-4 top-1/2 w-8 h-8"
+                    style={{ 
+                      transform: 'translateY(-50%)',
+                      willChange: 'auto'
+                    }}
                   >
-                    <AnimatePresence mode="wait">
-                      {showPassword ? (
-                        <motion.div
-                          key="eye-off"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <EyeOff className="h-5 w-5" />
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="eye"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Eye className="h-5 w-5" />
-                        </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading || googleLoading}
+                      className={cn(
+                        "w-full h-full",
+                        "text-muted-foreground hover:text-foreground transition-colors duration-200",
+                        "disabled:opacity-50 rounded-lg hover:bg-accent/50",
+                        "flex items-center justify-center",
+                        "outline-none focus:outline-none",
+                        "touch-none select-none"
                       )}
-                    </AnimatePresence>
-                  </motion.button>
+                      tabIndex={-1}
+                    >
+                      <div className="w-5 h-5 flex items-center justify-center pointer-events-none">
+                        <AnimatePresence mode="wait">
+                          {showPassword ? (
+                            <motion.div
+                              key="eye-off"
+                              initial={{ opacity: 0, rotate: -180 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 180 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-5 h-5 flex items-center justify-center"
+                            >
+                              <EyeOff className="h-5 w-5" />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="eye"
+                              initial={{ opacity: 0, rotate: -180 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 180 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-5 h-5 flex items-center justify-center"
+                            >
+                              <Eye className="h-5 w-5" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </button>
+                  </div>
                   <AnimatePresence>
                     {passwordFocused && (
                       <motion.div
@@ -476,43 +489,56 @@ export const SignUpModal = ({ open, onOpenChange }: SignUpModalProps) => {
                       "bg-background/50 backdrop-blur-sm"
                     )}
                   />
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={loading || googleLoading}
-                    className={cn(
-                      "absolute right-4 top-1/2 -translate-y-1/2",
-                      "text-muted-foreground hover:text-foreground transition-colors",
-                      "disabled:opacity-50 p-1 rounded-lg hover:bg-accent/50"
-                    )}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    tabIndex={-1}
+                  <div 
+                    className="absolute right-4 top-1/2 w-8 h-8"
+                    style={{ 
+                      transform: 'translateY(-50%)',
+                      willChange: 'auto'
+                    }}
                   >
-                    <AnimatePresence mode="wait">
-                      {showConfirmPassword ? (
-                        <motion.div
-                          key="eye-off-confirm"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <EyeOff className="h-5 w-5" />
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="eye-confirm"
-                          initial={{ opacity: 0, rotate: -180 }}
-                          animate={{ opacity: 1, rotate: 0 }}
-                          exit={{ opacity: 0, rotate: 180 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Eye className="h-5 w-5" />
-                        </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      disabled={loading || googleLoading}
+                      className={cn(
+                        "w-full h-full",
+                        "text-muted-foreground hover:text-foreground transition-colors duration-200",
+                        "disabled:opacity-50 rounded-lg hover:bg-accent/50",
+                        "flex items-center justify-center",
+                        "outline-none focus:outline-none",
+                        "touch-none select-none"
                       )}
-                    </AnimatePresence>
-                  </motion.button>
+                      tabIndex={-1}
+                    >
+                      <div className="w-5 h-5 flex items-center justify-center pointer-events-none">
+                        <AnimatePresence mode="wait">
+                          {showConfirmPassword ? (
+                            <motion.div
+                              key="eye-off-confirm"
+                              initial={{ opacity: 0, rotate: -180 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 180 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-5 h-5 flex items-center justify-center"
+                            >
+                              <EyeOff className="h-5 w-5" />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="eye-confirm"
+                              initial={{ opacity: 0, rotate: -180 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 180 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-5 h-5 flex items-center justify-center"
+                            >
+                              <Eye className="h-5 w-5" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </button>
+                  </div>
                   <AnimatePresence>
                     {confirmPasswordFocused && (
                       <motion.div

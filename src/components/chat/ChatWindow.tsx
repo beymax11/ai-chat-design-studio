@@ -14,17 +14,37 @@ import { cn } from '@/lib/utils';
 
 interface ChatWindowProps {
   onMenuClick?: () => void;
+  onSetFocusInputRef?: (fn: () => void) => void;
+  onSetFileUploadRef?: (fn: () => void) => void;
 }
 
-export const ChatWindow = ({ onMenuClick }: ChatWindowProps = {}) => {
+export const ChatWindow = ({ onMenuClick, onSetFocusInputRef, onSetFileUploadRef }: ChatWindowProps = {}) => {
   const { currentConversation, isTyping, selectedModel, setSelectedModel } = useChat();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const setInputRef = useRef<((value: string) => void) | null>(null);
+  const focusInputRef = useRef<(() => void) | null>(null);
+  const fileUploadRef = useRef<(() => void) | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+
+  useEffect(() => {
+    if (onSetFocusInputRef) {
+      onSetFocusInputRef(() => {
+        focusInputRef.current?.();
+      });
+    }
+  }, [onSetFocusInputRef]);
+
+  useEffect(() => {
+    if (onSetFileUploadRef) {
+      onSetFileUploadRef(() => {
+        fileUploadRef.current?.();
+      });
+    }
+  }, [onSetFileUploadRef]);
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages are added (to show newest at bottom)
@@ -280,7 +300,11 @@ export const ChatWindow = ({ onMenuClick }: ChatWindowProps = {}) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                <InputBar onSetInputRef={(setInput) => { setInputRef.current = setInput; }} />
+                <InputBar 
+                  onSetInputRef={(setInput) => { setInputRef.current = setInput; }}
+                  onSetFocusRef={(fn) => { focusInputRef.current = fn; }}
+                  onSetFileUploadRef={(fn) => { fileUploadRef.current = fn; }}
+                />
               </motion.div>
               
               {/* Recommendations */}
@@ -410,7 +434,10 @@ export const ChatWindow = ({ onMenuClick }: ChatWindowProps = {}) => {
             </div>
           </div>
           <div className="flex-shrink-0">
-            <InputBar />
+            <InputBar 
+              onSetFocusRef={(fn) => { focusInputRef.current = fn; }}
+              onSetFileUploadRef={(fn) => { fileUploadRef.current = fn; }}
+            />
           </div>
         </>
       )}

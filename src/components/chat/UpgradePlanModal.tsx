@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -125,20 +126,20 @@ export const UpgradePlanModal = ({ open, onOpenChange }: UpgradePlanModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-w-[95vw] mx-4 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <Crown className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-[100vw] w-full h-[100vh] max-h-[100vh] m-0 p-8 rounded-none sm:rounded-none left-0 top-0 translate-x-0 translate-y-0 overflow-y-auto">
+        <DialogHeader className="mb-8">
+          <DialogTitle className="text-3xl font-bold flex items-center gap-2">
+            <Crown className="w-7 h-7 text-primary" />
             Upgrade Your Plan
           </DialogTitle>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-lg">
             Choose the perfect plan for your needs. Upgrade anytime, cancel anytime.
           </p>
         </DialogHeader>
 
-        <div className="space-y-6 mt-6">
+        <div className="space-y-8 mt-8 max-w-7xl mx-auto">
           {/* Plan Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {(['free', 'pro', 'enterprise'] as PlanTier[]).map((tier) => {
               const plan = plans[tier];
               const Icon = plan.icon;
@@ -150,7 +151,7 @@ export const UpgradePlanModal = ({ open, onOpenChange }: UpgradePlanModalProps) 
                   key={tier}
                   whileHover={{ y: -4 }}
                   className={cn(
-                    'relative border rounded-lg p-6 cursor-pointer transition-all',
+                    'relative border p-6 cursor-pointer transition-all',
                     isSelected
                       ? 'border-primary bg-primary/5 shadow-lg'
                       : 'border-border hover:border-primary/50',
@@ -168,7 +169,7 @@ export const UpgradePlanModal = ({ open, onOpenChange }: UpgradePlanModalProps) 
                   
                   <div className="flex items-center gap-3 mb-4">
                     <div className={cn(
-                      'w-12 h-12 rounded-lg flex items-center justify-center',
+                      'w-12 h-12 flex items-center justify-center',
                       isSelected ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'
                     )}>
                       <Icon className="w-6 h-6" />
@@ -206,7 +207,7 @@ export const UpgradePlanModal = ({ open, onOpenChange }: UpgradePlanModalProps) 
           </div>
 
           {/* Features Comparison Table */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border overflow-hidden">
             <div className="bg-muted/50 p-4 border-b">
               <h3 className="font-semibold">Feature Comparison</h3>
             </div>
@@ -253,7 +254,7 @@ export const UpgradePlanModal = ({ open, onOpenChange }: UpgradePlanModalProps) 
           </div>
 
           {/* Additional Info */}
-          <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+          <div className="bg-muted/30 p-4 space-y-2">
             <div className="flex items-start gap-2">
               <Shield className="w-5 h-5 text-primary mt-0.5" />
               <div>
