@@ -181,25 +181,16 @@ export async function saveMessagesToSupabase(conversationId: string, messages: M
       created_at: msg.timestamp.toISOString(),
     }));
 
-    // Delete existing messages for this conversation first to avoid duplicates
-    // Then insert all messages
-    const { error: deleteError } = await supabase
+    // Use upsert to handle duplicates gracefully
+    // This will insert new messages or update existing ones based on the id
+    const { error: upsertError } = await supabase
       .from('messages')
-      .delete()
-      .eq('conversation_id', conversationId);
+      .upsert(messagesToInsert, {
+        onConflict: 'id'
+      });
 
-    if (deleteError) {
-      console.error('Error deleting old messages:', deleteError);
-      // Continue anyway, upsert will handle duplicates
-    }
-
-    // Insert all messages
-    const { error: insertError } = await supabase
-      .from('messages')
-      .insert(messagesToInsert);
-
-    if (insertError) {
-      console.error('Error saving messages:', insertError);
+    if (upsertError) {
+      console.error('Error saving messages:', upsertError);
       return false;
     }
 

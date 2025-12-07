@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 interface DeleteAccountRequest {
   userId: string;
   accessToken: string;
+  supabaseUrl?: string; // Optional: can be passed from client as fallback
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -64,7 +65,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   }
 
   try {
-    const { userId, accessToken }: DeleteAccountRequest = JSON.parse(event.body || '{}');
+    const { userId, accessToken, supabaseUrl: requestSupabaseUrl }: DeleteAccountRequest = JSON.parse(event.body || '{}');
 
     if (!userId || !accessToken) {
       return {
@@ -74,19 +75,35 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
 
-    // Get Supabase credentials from environment variables
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    // Get Supabase URL from environment variables or request (URL is public, so safe to accept from client)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || requestSupabaseUrl;
+    // Service role key MUST come from environment variables for security
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      console.error('Supabase credentials not configured', {
-        hasUrl: !!supabaseUrl,
+    if (!supabaseUrl) {
+      console.error('Supabase URL not configured', {
+        hasEnvUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+        hasRequestUrl: !!requestSupabaseUrl,
+      });
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Server configuration error: Supabase URL not found. Please set SUPABASE_URL environment variable or contact support.',
+        }),
+      };
+    }
+
+    if (!supabaseServiceRoleKey) {
+      console.error('Supabase Service Role Key not configured', {
         hasServiceRoleKey: !!supabaseServiceRoleKey,
       });
       return {
         statusCode: 500,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Server configuration error. Please contact support.' }),
+        body: JSON.stringify({ 
+          error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY environment variable is not set. This is required for account deletion. Please contact support.',
+        }),
       };
     }
 

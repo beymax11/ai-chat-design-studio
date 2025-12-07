@@ -361,6 +361,9 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       let deleteResponse: Response;
       let deleteError: any = null;
 
+      // Get Supabase URL from environment (it's public, safe to send)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+
       try {
         deleteResponse = await fetch(functionUrl, {
           method: 'POST',
@@ -370,6 +373,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           body: JSON.stringify({
             userId: userId,
             accessToken: session.session.access_token,
+            supabaseUrl: supabaseUrl, // Pass Supabase URL as fallback
           }),
         });
       } catch (fetchError: any) {
@@ -386,6 +390,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               body: JSON.stringify({
                 userId: userId,
                 accessToken: session.session.access_token,
+                supabaseUrl: supabaseUrl, // Pass Supabase URL as fallback
               }),
             });
           } catch (prodError: any) {
