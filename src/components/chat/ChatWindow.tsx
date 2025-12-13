@@ -164,20 +164,6 @@ export const ChatWindow = ({ onMenuClick, onSetFocusInputRef, onSetFileUploadRef
               <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center shadow-xl">
                 <Bot className="w-8 h-8 sm:w-10 sm:h-10 text-primary-foreground" />
               </div>
-              <motion.div
-                className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg"
-                animate={{
-                  rotate: [0, 360],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              >
-                <Sparkles className="w-3 h-3 text-white" />
-              </motion.div>
             </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -272,21 +258,6 @@ export const ChatWindow = ({ onMenuClick, onSetFocusInputRef, onSetFileUploadRef
                 transition={{ duration: 0.5 }}
                 className="text-center mb-6 sm:mb-8 max-w-md mx-auto"
               >
-                <div className="relative inline-block mb-4">
-                  <motion.div
-                    animate={{
-                      rotate: [0, 360],
-                      scale: [1, 1.1, 1],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    className="absolute inset-0 bg-primary/20 rounded-full blur-xl"
-                  />
-                  <Sparkles className="relative w-10 h-10 sm:w-12 sm:h-12 text-primary" />
-                </div>
                 <h2 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   How can I help you today?
                 </h2>

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { detectLanguageRequest } from '@/lib/languageDetection';
 import { translateText, LanguageCode } from '@/contexts/TranslationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/use-notifications';
 import {
   loadConversationsFromSupabase,
   saveConversationToSupabase,
@@ -55,6 +56,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
+  const { notifyNewMessage } = useNotifications();
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const hasLoadedFromSupabase = useRef(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
@@ -655,6 +657,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       messages: [...prev.messages, assistantMessage],
     } : null);
+
+    // Trigger notification for new assistant message
+    notifyNewMessage(aiResponse, currentConversation.title);
     } catch (error) {
       setIsTyping(false);
       console.error('Error sending message:', error);
@@ -726,11 +731,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       messages: prev.messages.map(m => m.id === messageId ? updatedMessage : m),
     } : null);
+
+    // Trigger notification for regenerated assistant message
+    notifyNewMessage(newResponse, currentConversation.title);
     } catch (error) {
       setIsTyping(false);
       console.error('Error regenerating response:', error);
     }
-  }, [currentConversation, selectedModel]);
+  }, [currentConversation, selectedModel, notifyNewMessage]);
 
   const editMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversation) return;

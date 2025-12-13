@@ -34,6 +34,7 @@ import { TermsAndPoliciesModal } from './TermsAndPoliciesModal';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { useState, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/contexts/KeyboardShortcutsContext';
+import { useTheme } from 'next-themes';
 
 interface SidebarProps {
   isCollapsed?: boolean;
@@ -54,6 +55,7 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
   } = useChat();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
   const { 
     isSearchOpen, setIsSearchOpen,
     isProjectsOpen, setIsProjectsOpen,
@@ -145,6 +147,9 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
 
   const userName = user?.user_metadata?.full_name || 'User';
   const userEmail = user?.email || 'user@example.com';
+  
+  // Determine logo based on theme
+  const logoSrc = resolvedTheme === 'dark' ? '/white.svg' : '/ai-ai.svg';
 
   const sidebarContent = (
     <>
@@ -157,9 +162,13 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2"
             >
-              
+              <img 
+                src={logoSrc} 
+                alt="AI-AI Logo" 
+                className="w-10 h-10"
+              />
               <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                BugBounty
+                AI-AI
               </h1>
             </motion.div>
             {!isMobile && onToggle && (
@@ -183,9 +192,11 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
               className="h-10 w-10 hover:bg-accent/50 transition-colors"
               title="Expand sidebar"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <img 
+                src={logoSrc} 
+                alt="AI-AI Logo" 
+                className="w-10 h-10"
+              />
             </Button>
           </div>
         )}
@@ -227,15 +238,15 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
 
       {/* Conversation List */}
       {(!isCollapsed || isMobile) && (
-        <ScrollArea className="flex-1 px-3 py-3">
-          <div className="px-2 py-2 mb-2">
+        <ScrollArea className="flex-1 py-3">
+          <div className="px-4 py-2 mb-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
               <span>Chats History</span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
             </h2>
           </div>
-          <div className="space-y-1">
+          <div className="px-4 space-y-1 overflow-hidden max-w-full">
             <AnimatePresence mode="popLayout">
               {conversations.map((conversation, index) => (
                 <motion.div
@@ -244,35 +255,36 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2, delay: index * 0.03 }}
-                  className="group relative"
+                  className="group relative w-full"
                 >
-                  <button
-                    onClick={() => handleSwitchConversation(conversation.id)}
-                    className={`
-                      w-full text-left px-3 py-2.5 rounded-lg text-sm
-                      transition-all duration-200
-                      flex items-center gap-2.5
-                      relative overflow-hidden
-                      cursor-pointer z-10
-                      ${
-                        currentConversation?.id === conversation.id
-                          ? 'bg-primary/10 text-foreground font-medium shadow-sm'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
-                      }
-                    `}
-                  >
-                    {currentConversation?.id === conversation.id && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      />
-                    )}
-                    <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                      currentConversation?.id === conversation.id ? 'text-primary' : ''
-                    }`} />
-                    <span className="truncate flex-1">{conversation.title}</span>
-                  </button>
+                  <div className="relative w-full">
+                    <button
+                      onClick={() => handleSwitchConversation(conversation.id)}
+                      className={`
+                        w-full text-left px-2.5 py-2.5 rounded-lg text-sm
+                        transition-all duration-200
+                        flex items-center gap-2.5
+                        relative overflow-hidden
+                        cursor-pointer z-10
+                        ${
+                          currentConversation?.id === conversation.id
+                            ? 'bg-primary/10 text-foreground font-medium shadow-sm'
+                            : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+                        }
+                      `}
+                    >
+                      {currentConversation?.id === conversation.id && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full"
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      )}
+                      <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                        currentConversation?.id === conversation.id ? 'text-primary' : ''
+                      }`} />
+                      <span className="flex-1 min-w-0 truncate pr-12" style={{ width: 0 }}>{conversation.title}</span>
+                    </button>
 
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 pointer-events-none group-hover:pointer-events-auto">
                     <DropdownMenu>
@@ -302,6 +314,7 @@ export const Sidebar = ({ isCollapsed = false, onToggle, isMobile = false, isOpe
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </div>
                   </div>
                 </motion.div>
               ))}

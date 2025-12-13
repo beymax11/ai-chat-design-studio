@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Bell, Shield, User, Eye, EyeOff, LogOut, Mail, UserCircle, Volume2, VolumeX, Trash2 } from 'lucide-react';
+import { X, Settings, Bell, Shield, User, Eye, EyeOff, LogOut, Mail, UserCircle, Volume2, VolumeX, Trash2, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -19,14 +19,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTheme } from 'next-themes';
 import { useAccentColor } from '@/contexts/AccentColorContext';
-import { useTranslation, SUPPORTED_LANGUAGES, type LanguageCode } from '@/contexts/TranslationContext';
+import { useTranslation, type LanguageCode } from '@/contexts/TranslationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { useChat } from '@/contexts/ChatContext';
+import { availableModels } from '@/components/chat/ModelSelector';
 
 interface SettingsModalProps {
   open: boolean;
@@ -42,10 +43,8 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { targetLanguage, setTargetLanguage } = useTranslation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { selectedModel, setSelectedModel } = useChat();
   const [appearance, setAppearance] = useState(theme || 'light');
-  const [language, setLanguage] = useState<LanguageCode>(targetLanguage);
-  const [spokenLanguage, setSpokenLanguage] = useState('auto-detect');
-  const [voice, setVoice] = useState('breeze');
 
   // Account section state
   const [fullName, setFullName] = useState('');
@@ -98,11 +97,6 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       setAppearance(theme);
     }
   }, [theme]);
-
-  // Sync language with translation context
-  useEffect(() => {
-    setLanguage(targetLanguage);
-  }, [targetLanguage]);
 
   // Load user profile data
   useEffect(() => {
@@ -477,11 +471,6 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   };
 
-  const handleLanguageChange = (value: string) => {
-    const langCode = value as LanguageCode;
-    setLanguage(langCode);
-    setTargetLanguage(langCode);
-  };
 
   const settingsSections = [
     { id: 'general' as SettingsSection, label: 'General', icon: Settings },
@@ -559,7 +548,7 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     <div>
                       <h3 className="text-2xl font-semibold mb-2">General</h3>
                       <p className="text-sm text-muted-foreground">
-                        Customize your app appearance and language preferences
+                        Customize your app appearance and general preferences
                       </p>
                     </div>
 
@@ -609,95 +598,35 @@ export const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                         </Select>
                       </div>
 
-                      {/* Language */}
+                      {/* Default Model */}
                       <div className="space-y-3">
                         <div>
-                          <label className="text-sm font-semibold">Translation Language</label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Select the target language for message translations
+                          <div className="flex items-center gap-2 mb-1">
+                            <Bot className="h-4 w-4 text-muted-foreground" />
+                            <label className="text-sm font-semibold">Default AI Model</label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Choose the default AI model for new conversations
                           </p>
                         </div>
-                        <Select value={language} onValueChange={handleLanguageChange}>
+                        <Select value={selectedModel} onValueChange={setSelectedModel}>
                           <SelectTrigger className="w-full h-11">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {SUPPORTED_LANGUAGES.map((lang) => (
-                              <SelectItem key={lang.code} value={lang.code}>
-                                {lang.nativeName} {lang.code !== 'auto-detect' && `(${lang.name})`}
+                            {availableModels.map((model) => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div className="flex items-center gap-2">
+                                  {model.icon && <span>{model.icon}</span>}
+                                  <span>{model.name}</span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                          Use the translate button on messages to translate them to this language.
+                          You can change the model for individual conversations using the model selector.
                         </p>
-                      </div>
-
-                      {/* Spoken language */}
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-semibold">Spoken Language</label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Select the language you mainly speak for better voice recognition
-                          </p>
-                        </div>
-                        <Select value={spokenLanguage} onValueChange={setSpokenLanguage}>
-                          <SelectTrigger className="w-full h-11">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto-detect">Auto-detect</SelectItem>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Spanish</SelectItem>
-                            <SelectItem value="fr">French</SelectItem>
-                            <SelectItem value="de">German</SelectItem>
-                            <SelectItem value="it">Italian</SelectItem>
-                            <SelectItem value="pt">Portuguese</SelectItem>
-                            <SelectItem value="zh">Chinese</SelectItem>
-                            <SelectItem value="ja">Japanese</SelectItem>
-                            <SelectItem value="ko">Korean</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          For best results, select the language you mainly speak. If it's not listed, it may still be supported via auto-detection.
-                        </p>
-                      </div>
-
-                      {/* Voice */}
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-semibold">Voice</label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Choose your preferred voice for text-to-speech
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-11 w-11 shrink-0"
-                            onClick={() => {
-                              // Handle voice preview
-                            }}
-                          >
-                            <Play className="h-4 w-4" />
-                          </Button>
-                          <div className="flex-1">
-                            <Select value={voice} onValueChange={setVoice}>
-                              <SelectTrigger className="w-full h-11">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="breeze">Breeze</SelectItem>
-                                <SelectItem value="nova">Nova</SelectItem>
-                                <SelectItem value="shimmer">Shimmer</SelectItem>
-                                <SelectItem value="echo">Echo</SelectItem>
-                                <SelectItem value="fable">Fable</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
